@@ -1,13 +1,14 @@
 CREATE TABLE users (
     user_id INTEGER PRIMARY KEY AUTOINCREMENT,
     name VARCHAR(100) NOT NULL,
-    email VARCHAR(255) UNIQUE NOT NULL,
-    phone VARCHAR(255) UNIQUE NOT NULL
+    email VARCHAR(255) UNIQUE NOT NULL CHECK (email LIKE '%_@_%._%'),
+    phone VARCHAR(20) UNIQUE NOT NULL CHECK (phone GLOB '+[0-9]*' OR phone GLOB '[0-9]*')
 );
 
 CREATE TABLE carts (
     cart_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL UNIQUE,
+    user_id INTEGER NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'checked_out')),
 
     FOREIGN KEY(user_id)
     REFERENCES users(user_id)
