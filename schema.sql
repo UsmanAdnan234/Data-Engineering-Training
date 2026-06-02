@@ -8,30 +8,43 @@ CREATE TABLE users (
 CREATE TABLE carts (
     cart_id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL UNIQUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
     FOREIGN KEY(user_id)
     REFERENCES users(user_id)
+    ON DELETE CASCADE
 );
 
 CREATE TABLE products (
     product_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name VARCHAR(255) NOT NULL,
-    price DECIMAL(10,2) NOT NULL
+    name VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE product_variants (
+    variant_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    product_id INTEGER NOT NULL,
+    color VARCHAR(50),
+    size VARCHAR(50),
+    price DECIMAL(10,2) NOT NULL CHECK(price > 0),
+    stock INTEGER NOT NULL CHECK(stock >= 0),
+
+    FOREIGN KEY(product_id)
+    REFERENCES products(product_id)
+    ON DELETE CASCADE
 );
 
 CREATE TABLE cart_items (
     item_id INTEGER PRIMARY KEY AUTOINCREMENT,
     cart_id INTEGER NOT NULL,
-    product_id INTEGER NOT NULL,
-    quantity INTEGER NOT NULL DEFAULT 1,
-    added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    variant_id INTEGER NOT NULL,
+    quantity INTEGER NOT NULL DEFAULT 1 CHECK(quantity > 0),
 
-    FOREIGN KEY (cart_id)
-    REFERENCES carts(cart_id),
+    FOREIGN KEY(cart_id)
+    REFERENCES carts(cart_id)
+    ON DELETE CASCADE,
 
-    FOREIGN KEY (product_id)
-    REFERENCES products(product_id),
+    FOREIGN KEY(variant_id)
+    REFERENCES product_variants(variant_id)
+    ON DELETE CASCADE,
 
-    UNIQUE(cart_id, product_id)
+    UNIQUE(cart_id, variant_id)
 );
