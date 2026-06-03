@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Request
-from fastapi.exceptions import RequestValidationError
+from fastapi.exceptions import RequestValidationError, HTTPException
 from fastapi.responses import JSONResponse
 
 from app.api.cart import router as cartRouter
@@ -10,25 +10,55 @@ app = FastAPI()
 app.include_router(cartRouter)
 
 
+def _friendlyMessage(errType: str, ctx: dict | None) -> str:
+    ctx = ctx or {}
+    messages = {
+        "int_parsing":        "Must be a valid integer",
+        "int_type":           "Must be a valid integer",
+        "float_type":         "Must be a valid number",
+        "string_type":        "Must be text",
+        "bool_type":          "Must be true or false",
+        "missing":            "This field is required",
+        "greater_than":       f"Must be greater than {ctx.get('gt', 0)}",
+        "greater_than_equal": f"Must be {ctx.get('ge', 0)} or greater",
+        "less_than_equal":    f"Must be at most {ctx.get('le', 2147483647)}",
+        "less_than":          f"Must be less than {ctx.get('lt', 0)}",
+    }
+    return messages.get(errType, "Invalid value")
+
+
+def _friendlyField(loc: tuple) -> str:
+    parts = [str(p) for p in loc if p not in ("body", "query", "path")]
+    return ".".join(parts) if parts else "field"
+
+
 @app.exception_handler(RequestValidationError)
 async def validationExceptionHandler(request: Request, exc: RequestValidationError):
-    errors = [
-        {
-            "field": ".".join(str(loc) for loc in err["loc"]),
-            "message": err["msg"],
-            "type": err["type"]
-        }
-        for err in exc.errors()
-    ]
+    rawErrors = exc.errors()
 
     logger.warning(
-        f"[validationError] Invalid request | {request.method} {request.url.path} | errors={errors}"
+        f"[validationError] Validation failed | {request.method} {request.url.path} | raw={rawErrors}"
     )
+
+    details = [
+        {
+            "field": _friendlyField(err["loc"]),
+            "message": _friendlyMessage(err["type"], err.get("ctx"))
+        }
+        for err in rawErrors
+    ]
 
     return JSONResponse(
         status_code=422,
-        content={
-            "detail": "Invalid request data",
-            "errors": errors
-        }
+        content={"error": "VALIDATION_ERROR", "details": details}
+    )
+
+
+@app.exception_handler(HTTPException)
+async def httpExceptionHandler(request: Request, exc: HTTPException):
+    if isinstance(exc.detail, dict):
+        return JSONResponse(status_code=exc.status_code, content=exc.detail)
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"error": "HTTP_ERROR", "message": str(exc.detail)}
     )

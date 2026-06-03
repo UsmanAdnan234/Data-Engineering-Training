@@ -32,6 +32,13 @@ def getCartService() -> ICartService:
     return CartService(CartRepository(conn))
 
 
+def _err(statusCode: int, code: str, message: str):
+    raise HTTPException(
+        status_code=statusCode,
+        detail={"error": code, "message": message}
+    )
+
+
 @router.post("/carts", response_model=CreateCartResponse, status_code=201)
 def createCart(
     payload: CreateCartRequest,
@@ -54,25 +61,19 @@ def createCart(
 
     except UserNotFoundException as e:
         logger.warning(f"[createCart] User not found | user_id={payload.user_id} | cause: {e}")
-        raise HTTPException(
-            status_code=404,
-            detail=f"User with id={payload.user_id} not found"
-        )
+        _err(404, "USER_NOT_FOUND", f"User with id={payload.user_id} not found")
 
     except CartAlreadyExistsException as e:
         logger.warning(f"[createCart] Active cart already exists | user_id={payload.user_id} | cause: {e}")
-        raise HTTPException(
-            status_code=409,
-            detail="Active cart already exists for this user"
-        )
+        _err(409, "CART_ALREADY_EXISTS", "An active cart already exists for this user")
 
     except DatabaseException as e:
         logger.error(f"[createCart] Database error | user_id={payload.user_id} | cause: {e}")
-        raise HTTPException(status_code=503, detail="Database unavailable, please try again")
+        _err(503, "SERVICE_UNAVAILABLE", "Service temporarily unavailable, please try again")
 
     except Exception as e:
         logger.exception(f"[createCart] Unexpected error | user_id={payload.user_id} | cause: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        _err(500, "INTERNAL_ERROR", "An unexpected error occurred")
 
 
 @router.post("/carts/{cart_id}/items", response_model=AddCartItemResponse, status_code=201)
@@ -103,31 +104,25 @@ def addItem(
 
     except CartNotFoundException as e:
         logger.warning(f"[addItem] Cart not found | cart_id={cart_id} | cause: {e}")
-        raise HTTPException(status_code=404, detail=f"Cart with id={cart_id} not found")
+        _err(404, "CART_NOT_FOUND", f"Cart with id={cart_id} not found")
 
     except CartAlreadyCheckedOutException as e:
         logger.warning(f"[addItem] Cart is checked out | cart_id={cart_id} | cause: {e}")
-        raise HTTPException(
-            status_code=409,
-            detail=f"Cart with id={cart_id} is already checked out"
-        )
+        _err(409, "CART_CHECKED_OUT", f"Cart with id={cart_id} is already checked out")
 
     except VariantNotFoundException as e:
         logger.warning(
             f"[addItem] Variant not found | variant_id={payload.variant_id} cart_id={cart_id} | cause: {e}"
         )
-        raise HTTPException(
-            status_code=404,
-            detail=f"Product variant with id={payload.variant_id} not found"
-        )
+        _err(404, "VARIANT_NOT_FOUND", f"Product variant with id={payload.variant_id} not found")
 
     except DatabaseException as e:
         logger.error(f"[addItem] Database error | cart_id={cart_id} | cause: {e}")
-        raise HTTPException(status_code=503, detail="Database unavailable, please try again")
+        _err(503, "SERVICE_UNAVAILABLE", "Service temporarily unavailable, please try again")
 
     except Exception as e:
         logger.exception(f"[addItem] Unexpected error | cart_id={cart_id} | cause: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        _err(500, "INTERNAL_ERROR", "An unexpected error occurred")
 
 
 @router.delete(
@@ -151,33 +146,27 @@ def removeItem(
 
     except CartNotFoundException as e:
         logger.warning(f"[removeItem] Cart not found | cart_id={cart_id} | cause: {e}")
-        raise HTTPException(status_code=404, detail=f"Cart with id={cart_id} not found")
+        _err(404, "CART_NOT_FOUND", f"Cart with id={cart_id} not found")
 
     except CartAlreadyCheckedOutException as e:
         logger.warning(f"[removeItem] Cart is checked out | cart_id={cart_id} | cause: {e}")
-        raise HTTPException(
-            status_code=409,
-            detail=f"Cart with id={cart_id} is already checked out"
-        )
+        _err(409, "CART_CHECKED_OUT", f"Cart with id={cart_id} is already checked out")
 
     except CartItemNotFoundException as e:
         logger.warning(
-            f"[removeItem] Item not found in cart | item_id={item_id} cart_id={cart_id} | cause: {e}"
+            f"[removeItem] Item not found | item_id={item_id} cart_id={cart_id} | cause: {e}"
         )
-        raise HTTPException(
-            status_code=404,
-            detail=f"Item with id={item_id} not found in cart {cart_id}"
-        )
+        _err(404, "ITEM_NOT_FOUND", f"Item with id={item_id} not found in cart {cart_id}")
 
     except DatabaseException as e:
         logger.error(f"[removeItem] Database error | cart_id={cart_id} item_id={item_id} | cause: {e}")
-        raise HTTPException(status_code=503, detail="Database unavailable, please try again")
+        _err(503, "SERVICE_UNAVAILABLE", "Service temporarily unavailable, please try again")
 
     except Exception as e:
         logger.exception(
             f"[removeItem] Unexpected error | cart_id={cart_id} item_id={item_id} | cause: {e}"
         )
-        raise HTTPException(status_code=500, detail="Internal server error")
+        _err(500, "INTERNAL_ERROR", "An unexpected error occurred")
 
 
 @router.delete("/carts/{cart_id}", response_model=DeleteCartResponse, status_code=200)
@@ -196,15 +185,15 @@ def deleteCart(
 
     except CartNotFoundException as e:
         logger.warning(f"[deleteCart] Cart not found | cart_id={cart_id} | cause: {e}")
-        raise HTTPException(status_code=404, detail=f"Cart with id={cart_id} not found")
+        _err(404, "CART_NOT_FOUND", f"Cart with id={cart_id} not found")
 
     except DatabaseException as e:
         logger.error(f"[deleteCart] Database error | cart_id={cart_id} | cause: {e}")
-        raise HTTPException(status_code=503, detail="Database unavailable, please try again")
+        _err(503, "SERVICE_UNAVAILABLE", "Service temporarily unavailable, please try again")
 
     except Exception as e:
         logger.exception(f"[deleteCart] Unexpected error | cart_id={cart_id} | cause: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        _err(500, "INTERNAL_ERROR", "An unexpected error occurred")
 
 
 @router.post("/carts/{cart_id}/checkout", response_model=CheckoutResponse, status_code=200)
@@ -227,26 +216,20 @@ def checkout(
 
     except CartNotFoundException as e:
         logger.warning(f"[checkout] Cart not found | cart_id={cart_id} | cause: {e}")
-        raise HTTPException(status_code=404, detail=f"Cart with id={cart_id} not found")
+        _err(404, "CART_NOT_FOUND", f"Cart with id={cart_id} not found")
 
     except CartAlreadyCheckedOutException as e:
         logger.warning(f"[checkout] Cart already checked out | cart_id={cart_id} | cause: {e}")
-        raise HTTPException(
-            status_code=409,
-            detail=f"Cart with id={cart_id} is already checked out"
-        )
+        _err(409, "CART_CHECKED_OUT", f"Cart with id={cart_id} is already checked out")
 
     except CartEmptyException as e:
         logger.warning(f"[checkout] Cart is empty | cart_id={cart_id} | cause: {e}")
-        raise HTTPException(
-            status_code=422,
-            detail=f"Cart with id={cart_id} has no items, cannot checkout"
-        )
+        _err(422, "CART_EMPTY", f"Cart with id={cart_id} has no items, cannot checkout")
 
     except DatabaseException as e:
         logger.error(f"[checkout] Database error | cart_id={cart_id} | cause: {e}")
-        raise HTTPException(status_code=503, detail="Database unavailable, please try again")
+        _err(503, "SERVICE_UNAVAILABLE", "Service temporarily unavailable, please try again")
 
     except Exception as e:
         logger.exception(f"[checkout] Unexpected error | cart_id={cart_id} | cause: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        _err(500, "INTERNAL_ERROR", "An unexpected error occurred")
