@@ -21,7 +21,7 @@ def _friendlyMessage(errType: str, ctx: dict | None) -> str:
         "missing":            "This field is required",
         "greater_than":       f"Must be greater than {ctx.get('gt', 0)}",
         "greater_than_equal": f"Must be {ctx.get('ge', 0)} or greater",
-        "less_than_equal":    f"Must be at most {ctx.get('le', 2147483647)}",
+        "less_than_equal":    "Value is out of valid range",
         "less_than":          f"Must be less than {ctx.get('lt', 0)}",
     }
     return messages.get(errType, "Invalid value")
@@ -36,10 +36,6 @@ def _friendlyField(loc: tuple) -> str:
 async def validationExceptionHandler(request: Request, exc: RequestValidationError):
     rawErrors = exc.errors()
 
-    logger.warning(
-        f"[validationError] Validation failed | {request.method} {request.url.path} | raw={rawErrors}"
-    )
-
     details = [
         {
             "field": _friendlyField(err["loc"]),
@@ -47,6 +43,12 @@ async def validationExceptionHandler(request: Request, exc: RequestValidationErr
         }
         for err in rawErrors
     ]
+
+    logger.warning(
+        f"[validationError] | status_code=422 | error=VALIDATION_ERROR"
+        f" | method={request.method} | path={request.url.path}"
+        f" | fields={[d['field'] for d in details]} | raw={rawErrors}"
+    )
 
     return JSONResponse(
         status_code=422,
@@ -57,7 +59,15 @@ async def validationExceptionHandler(request: Request, exc: RequestValidationErr
 @app.exception_handler(HTTPException)
 async def httpExceptionHandler(request: Request, exc: HTTPException):
     if isinstance(exc.detail, dict):
+        # Our own structured errors — already logged in the API function before _err() was called
         return JSONResponse(status_code=exc.status_code, content=exc.detail)
+
+    # FastAPI-internal errors (405 Method Not Allowed, 404 unknown route, etc.)
+    logger.warning(
+        f"[httpError] | status_code={exc.status_code} | error=HTTP_ERROR"
+        f" | method={request.method} | path={request.url.path} | detail={exc.detail}"
+    )
+
     return JSONResponse(
         status_code=exc.status_code,
         content={"error": "HTTP_ERROR", "message": str(exc.detail)}

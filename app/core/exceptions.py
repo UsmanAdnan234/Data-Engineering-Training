@@ -26,5 +26,9 @@ class CartItemNotFoundException(Exception):
     pass
 
 
+class InsufficientStockException(Exception):
+    pass
+
+
 class DatabaseException(Exception):
     pass

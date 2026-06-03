@@ -1,5 +1,7 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Path
+from typing import Annotated
 
+SQLITE_INT_MAX = 9223372036854775807
 from app.schemas.cart import (
     CreateCartRequest,
     CreateCartResponse,
@@ -21,6 +23,7 @@ from app.core.exceptions import (
     CartEmptyException,
     VariantNotFoundException,
     CartItemNotFoundException,
+    InsufficientStockException,
     DatabaseException,
 )
 
@@ -39,18 +42,20 @@ def _err(statusCode: int, code: str, message: str):
     )
 
 
+# =========================
+# CREATE CART
+# =========================
 @router.post("/carts", response_model=CreateCartResponse, status_code=201)
-def createCart(
-    payload: CreateCartRequest,
-    service: ICartService = Depends(getCartService)
-):
-    logger.info(f"[createCart] Request received | user_id={payload.user_id}")
+def createCart(payload: CreateCartRequest, service: ICartService = Depends(getCartService)):
+
+    logger.info(f"[createCart] | event=request_received | user_id={payload.user_id}")
 
     try:
         result = service.createCart(payload.user_id)
 
         logger.info(
-            f"[createCart] Cart created | cart_id={result['cart_id']} user_id={result['user_id']}"
+            f"[createCart] | status_code=201 | event=cart_created"
+            f" | cart_id={result['cart_id']} | user_id={result['user_id']}"
         )
 
         return {
@@ -60,38 +65,50 @@ def createCart(
         }
 
     except UserNotFoundException as e:
-        logger.warning(f"[createCart] User not found | user_id={payload.user_id} | cause: {e}")
-        _err(404, "USER_NOT_FOUND", f"User with id={payload.user_id} not found")
+        logger.warning(
+            f"[createCart] | status_code=404 | error=USER_NOT_FOUND"
+            f" | user_id={payload.user_id} | cause={e}"
+        )
+        _err(404, "USER_NOT_FOUND", "User not found")
 
     except CartAlreadyExistsException as e:
-        logger.warning(f"[createCart] Active cart already exists | user_id={payload.user_id} | cause: {e}")
-        _err(409, "CART_ALREADY_EXISTS", "An active cart already exists for this user")
+        logger.warning(
+            f"[createCart] | status_code=409 | error=CART_ALREADY_EXISTS"
+            f" | user_id={payload.user_id} | cause={e}"
+        )
+        _err(409, "CART_ALREADY_EXISTS", "Active cart already exists")
 
     except DatabaseException as e:
-        logger.error(f"[createCart] Database error | user_id={payload.user_id} | cause: {e}")
-        _err(503, "SERVICE_UNAVAILABLE", "Service temporarily unavailable, please try again")
+        logger.error(
+            f"[createCart] | status_code=503 | error=DATABASE_ERROR"
+            f" | user_id={payload.user_id} | cause={e}"
+        )
+        _err(503, "SERVICE_UNAVAILABLE", "Service temporarily unavailable")
 
     except Exception as e:
-        logger.exception(f"[createCart] Unexpected error | user_id={payload.user_id} | cause: {e}")
-        _err(500, "INTERNAL_ERROR", "An unexpected error occurred")
+        logger.exception(
+            f"[createCart] | status_code=500 | error=INTERNAL_ERROR | user_id={payload.user_id}"
+        )
+        _err(500, "INTERNAL_ERROR", "Unexpected error")
 
 
+# =========================
+# ADD ITEM
+# =========================
 @router.post("/carts/{cart_id}/items", response_model=AddCartItemResponse, status_code=201)
-def addItem(
-    cart_id: int,
-    payload: AddCartItemRequest,
-    service: ICartService = Depends(getCartService)
-):
+def addItem(cart_id: Annotated[int, Path(gt=0, le=SQLITE_INT_MAX)], payload: AddCartItemRequest, service: ICartService = Depends(getCartService)):
+
     logger.info(
-        f"[addItem] Request received | cart_id={cart_id} variant_id={payload.variant_id} quantity={payload.quantity}"
+        f"[addItem] | event=request_received"
+        f" | cart_id={cart_id} | variant_id={payload.variant_id} | quantity={payload.quantity}"
     )
 
     try:
         result = service.addItem(cart_id, payload.variant_id, payload.quantity)
 
         logger.info(
-            f"[addItem] Item added | item_id={result['item_id']} cart_id={cart_id} "
-            f"variant_id={result['variant_id']} quantity={result['quantity']}"
+            f"[addItem] | status_code=201 | event=item_added"
+            f" | cart_id={cart_id} | item_id={result['item_id']} | quantity={result['quantity']}"
         )
 
         return {
@@ -103,110 +120,142 @@ def addItem(
         }
 
     except CartNotFoundException as e:
-        logger.warning(f"[addItem] Cart not found | cart_id={cart_id} | cause: {e}")
-        _err(404, "CART_NOT_FOUND", f"Cart with id={cart_id} not found")
+        logger.warning(
+            f"[addItem] | status_code=404 | error=CART_NOT_FOUND | cart_id={cart_id} | cause={e}"
+        )
+        _err(404, "CART_NOT_FOUND", "Cart not found")
 
     except CartAlreadyCheckedOutException as e:
-        logger.warning(f"[addItem] Cart is checked out | cart_id={cart_id} | cause: {e}")
-        _err(409, "CART_CHECKED_OUT", f"Cart with id={cart_id} is already checked out")
+        logger.warning(
+            f"[addItem] | status_code=409 | error=CART_CHECKED_OUT | cart_id={cart_id} | cause={e}"
+        )
+        _err(409, "CART_CHECKED_OUT", "Cart already checked out")
 
     except VariantNotFoundException as e:
         logger.warning(
-            f"[addItem] Variant not found | variant_id={payload.variant_id} cart_id={cart_id} | cause: {e}"
+            f"[addItem] | status_code=404 | error=VARIANT_NOT_FOUND"
+            f" | cart_id={cart_id} | variant_id={payload.variant_id} | cause={e}"
         )
-        _err(404, "VARIANT_NOT_FOUND", f"Product variant with id={payload.variant_id} not found")
+        _err(404, "VARIANT_NOT_FOUND", "Variant not found")
+
+    except InsufficientStockException as e:
+        logger.warning(
+            f"[addItem] | status_code=422 | error=INSUFFICIENT_STOCK"
+            f" | cart_id={cart_id} | variant_id={payload.variant_id} | quantity={payload.quantity} | cause={e}"
+        )
+        _err(422, "INSUFFICIENT_STOCK", "Requested quantity exceeds available stock")
 
     except DatabaseException as e:
-        logger.error(f"[addItem] Database error | cart_id={cart_id} | cause: {e}")
-        _err(503, "SERVICE_UNAVAILABLE", "Service temporarily unavailable, please try again")
+        logger.error(
+            f"[addItem] | status_code=503 | error=DATABASE_ERROR | cart_id={cart_id} | cause={e}"
+        )
+        _err(503, "SERVICE_UNAVAILABLE", "Service unavailable")
 
-    except Exception as e:
-        logger.exception(f"[addItem] Unexpected error | cart_id={cart_id} | cause: {e}")
-        _err(500, "INTERNAL_ERROR", "An unexpected error occurred")
+    except Exception:
+        logger.exception(
+            f"[addItem] | status_code=500 | error=INTERNAL_ERROR | cart_id={cart_id}"
+        )
+        _err(500, "INTERNAL_ERROR", "Unexpected error")
 
 
-@router.delete(
-    "/carts/{cart_id}/items/{item_id}",
-    response_model=RemoveCartItemResponse,
-    status_code=200
-)
-def removeItem(
-    cart_id: int,
-    item_id: int,
-    service: ICartService = Depends(getCartService)
-):
-    logger.info(f"[removeItem] Request received | cart_id={cart_id} item_id={item_id}")
+# =========================
+# REMOVE ITEM
+# =========================
+@router.delete("/carts/{cart_id}/items/{item_id}", response_model=RemoveCartItemResponse, status_code=200)
+def removeItem(cart_id: Annotated[int, Path(gt=0, le=SQLITE_INT_MAX)], item_id: Annotated[int, Path(gt=0, le=SQLITE_INT_MAX)], service: ICartService = Depends(getCartService)):
+
+    logger.info(
+        f"[removeItem] | event=request_received | cart_id={cart_id} | item_id={item_id}"
+    )
 
     try:
         service.removeItem(cart_id, item_id)
 
-        logger.info(f"[removeItem] Item removed | item_id={item_id} cart_id={cart_id}")
+        logger.info(
+            f"[removeItem] | status_code=200 | event=item_removed | cart_id={cart_id} | item_id={item_id}"
+        )
 
         return {"message": "Item removed from cart"}
 
     except CartNotFoundException as e:
-        logger.warning(f"[removeItem] Cart not found | cart_id={cart_id} | cause: {e}")
-        _err(404, "CART_NOT_FOUND", f"Cart with id={cart_id} not found")
+        logger.warning(
+            f"[removeItem] | status_code=404 | error=CART_NOT_FOUND | cart_id={cart_id} | cause={e}"
+        )
+        _err(404, "CART_NOT_FOUND", "Cart not found")
 
     except CartAlreadyCheckedOutException as e:
-        logger.warning(f"[removeItem] Cart is checked out | cart_id={cart_id} | cause: {e}")
-        _err(409, "CART_CHECKED_OUT", f"Cart with id={cart_id} is already checked out")
+        logger.warning(
+            f"[removeItem] | status_code=409 | error=CART_CHECKED_OUT | cart_id={cart_id} | cause={e}"
+        )
+        _err(409, "CART_CHECKED_OUT", "Cart already checked out")
 
     except CartItemNotFoundException as e:
         logger.warning(
-            f"[removeItem] Item not found | item_id={item_id} cart_id={cart_id} | cause: {e}"
+            f"[removeItem] | status_code=404 | error=ITEM_NOT_FOUND"
+            f" | cart_id={cart_id} | item_id={item_id} | cause={e}"
         )
-        _err(404, "ITEM_NOT_FOUND", f"Item with id={item_id} not found in cart {cart_id}")
+        _err(404, "ITEM_NOT_FOUND", "Item not found")
 
     except DatabaseException as e:
-        logger.error(f"[removeItem] Database error | cart_id={cart_id} item_id={item_id} | cause: {e}")
-        _err(503, "SERVICE_UNAVAILABLE", "Service temporarily unavailable, please try again")
-
-    except Exception as e:
-        logger.exception(
-            f"[removeItem] Unexpected error | cart_id={cart_id} item_id={item_id} | cause: {e}"
+        logger.error(
+            f"[removeItem] | status_code=503 | error=DATABASE_ERROR"
+            f" | cart_id={cart_id} | item_id={item_id} | cause={e}"
         )
-        _err(500, "INTERNAL_ERROR", "An unexpected error occurred")
+        _err(503, "SERVICE_UNAVAILABLE", "Service unavailable")
+
+    except Exception:
+        logger.exception(
+            f"[removeItem] | status_code=500 | error=INTERNAL_ERROR | cart_id={cart_id} | item_id={item_id}"
+        )
+        _err(500, "INTERNAL_ERROR", "Unexpected error")
 
 
+# =========================
+# DELETE CART
+# =========================
 @router.delete("/carts/{cart_id}", response_model=DeleteCartResponse, status_code=200)
-def deleteCart(
-    cart_id: int,
-    service: ICartService = Depends(getCartService)
-):
-    logger.info(f"[deleteCart] Request received | cart_id={cart_id}")
+def deleteCart(cart_id: Annotated[int, Path(gt=0, le=SQLITE_INT_MAX)], service: ICartService = Depends(getCartService)):
+
+    logger.info(f"[deleteCart] | event=request_received | cart_id={cart_id}")
 
     try:
         service.deleteCart(cart_id)
 
-        logger.info(f"[deleteCart] Cart deleted | cart_id={cart_id}")
+        logger.info(f"[deleteCart] | status_code=200 | event=cart_deleted | cart_id={cart_id}")
 
         return {"message": "Cart deleted successfully"}
 
     except CartNotFoundException as e:
-        logger.warning(f"[deleteCart] Cart not found | cart_id={cart_id} | cause: {e}")
-        _err(404, "CART_NOT_FOUND", f"Cart with id={cart_id} not found")
+        logger.warning(
+            f"[deleteCart] | status_code=404 | error=CART_NOT_FOUND | cart_id={cart_id} | cause={e}"
+        )
+        _err(404, "CART_NOT_FOUND", "Cart not found")
 
     except DatabaseException as e:
-        logger.error(f"[deleteCart] Database error | cart_id={cart_id} | cause: {e}")
-        _err(503, "SERVICE_UNAVAILABLE", "Service temporarily unavailable, please try again")
+        logger.error(
+            f"[deleteCart] | status_code=503 | error=DATABASE_ERROR | cart_id={cart_id} | cause={e}"
+        )
+        _err(503, "SERVICE_UNAVAILABLE", "Service unavailable")
 
-    except Exception as e:
-        logger.exception(f"[deleteCart] Unexpected error | cart_id={cart_id} | cause: {e}")
-        _err(500, "INTERNAL_ERROR", "An unexpected error occurred")
+    except Exception:
+        logger.exception(
+            f"[deleteCart] | status_code=500 | error=INTERNAL_ERROR | cart_id={cart_id}"
+        )
+        _err(500, "INTERNAL_ERROR", "Unexpected error")
 
 
+# =========================
+# CHECKOUT
+# =========================
 @router.post("/carts/{cart_id}/checkout", response_model=CheckoutResponse, status_code=200)
-def checkout(
-    cart_id: int,
-    service: ICartService = Depends(getCartService)
-):
-    logger.info(f"[checkout] Request received | cart_id={cart_id}")
+def checkout(cart_id: Annotated[int, Path(gt=0, le=SQLITE_INT_MAX)], service: ICartService = Depends(getCartService)):
+
+    logger.info(f"[checkout] | event=request_received | cart_id={cart_id}")
 
     try:
         result = service.checkout(cart_id)
 
-        logger.info(f"[checkout] Cart checked out | cart_id={cart_id}")
+        logger.info(f"[checkout] | status_code=200 | event=checkout_success | cart_id={cart_id}")
 
         return {
             "cart_id": result["cart_id"],
@@ -215,21 +264,31 @@ def checkout(
         }
 
     except CartNotFoundException as e:
-        logger.warning(f"[checkout] Cart not found | cart_id={cart_id} | cause: {e}")
-        _err(404, "CART_NOT_FOUND", f"Cart with id={cart_id} not found")
+        logger.warning(
+            f"[checkout] | status_code=404 | error=CART_NOT_FOUND | cart_id={cart_id} | cause={e}"
+        )
+        _err(404, "CART_NOT_FOUND", "Cart not found")
 
     except CartAlreadyCheckedOutException as e:
-        logger.warning(f"[checkout] Cart already checked out | cart_id={cart_id} | cause: {e}")
-        _err(409, "CART_CHECKED_OUT", f"Cart with id={cart_id} is already checked out")
+        logger.warning(
+            f"[checkout] | status_code=409 | error=CART_CHECKED_OUT | cart_id={cart_id} | cause={e}"
+        )
+        _err(409, "CART_CHECKED_OUT", "Cart already checked out")
 
     except CartEmptyException as e:
-        logger.warning(f"[checkout] Cart is empty | cart_id={cart_id} | cause: {e}")
-        _err(422, "CART_EMPTY", f"Cart with id={cart_id} has no items, cannot checkout")
+        logger.warning(
+            f"[checkout] | status_code=422 | error=CART_EMPTY | cart_id={cart_id} | cause={e}"
+        )
+        _err(422, "CART_EMPTY", "Cart is empty")
 
     except DatabaseException as e:
-        logger.error(f"[checkout] Database error | cart_id={cart_id} | cause: {e}")
-        _err(503, "SERVICE_UNAVAILABLE", "Service temporarily unavailable, please try again")
+        logger.error(
+            f"[checkout] | status_code=503 | error=DATABASE_ERROR | cart_id={cart_id} | cause={e}"
+        )
+        _err(503, "SERVICE_UNAVAILABLE", "Service unavailable")
 
-    except Exception as e:
-        logger.exception(f"[checkout] Unexpected error | cart_id={cart_id} | cause: {e}")
-        _err(500, "INTERNAL_ERROR", "An unexpected error occurred")
+    except Exception:
+        logger.exception(
+            f"[checkout] | status_code=500 | error=INTERNAL_ERROR | cart_id={cart_id}"
+        )
+        _err(500, "INTERNAL_ERROR", "Unexpected error")

@@ -117,7 +117,7 @@ class CartRepository(ICartRepository):
 
     def getVariant(self, variantId: int):
         cursor = self._execute(
-            "SELECT variant_id FROM product_variants WHERE variant_id = ?",
+            "SELECT variant_id, stock FROM product_variants WHERE variant_id = ?",
             (variantId,)
         )
         return cursor.fetchone()

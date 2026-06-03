@@ -9,6 +9,7 @@ from app.core.exceptions import (
     CartEmptyException,
     VariantNotFoundException,
     CartItemNotFoundException,
+    InsufficientStockException,
 )
 
 
@@ -66,6 +67,11 @@ class CartService(ICartService):
         existing = self._repo.getCartItem(cartId, variantId)
         if existing:
             newQuantity = existing["quantity"] + quantity
+            if newQuantity > variant["stock"]:
+                raise InsufficientStockException(
+                    f"Requested total quantity={newQuantity} exceeds available stock={variant['stock']}"
+                    f" for variant_id={variantId}"
+                )
             self._repo.updateQuantity(existing["item_id"], newQuantity)
             return {
                 "item_id": existing["item_id"],
@@ -73,6 +79,12 @@ class CartService(ICartService):
                 "variant_id": variantId,
                 "quantity": newQuantity
             }
+
+        if quantity > variant["stock"]:
+            raise InsufficientStockException(
+                f"Requested quantity={quantity} exceeds available stock={variant['stock']}"
+                f" for variant_id={variantId}"
+            )
 
         itemId = self._repo.addItem(cartId, variantId, quantity)
         return {

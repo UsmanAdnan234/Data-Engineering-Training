@@ -65572,3 +65572,47 @@ OverflowError: Python int too large to convert to SQLite INTEGER
 2026-06-04 00:08:11,819 WARNING [cart.checkout:218] [checkout] Cart not found | cart_id=1 | cause: Cart with id=1 not found
 2026-06-04 00:11:30,956 INFO [cart.checkout:204] [checkout] Request received | cart_id=2
 2026-06-04 00:11:30,958 WARNING [cart.checkout:226] [checkout] Cart is empty | cart_id=2 | cause: Cart id=2 has no items, cannot checkout
+2026-06-04 00:42:20,689 WARNING [main.validationExceptionHandler:39] [validationError] Validation failed | POST /carts | raw=[{'type': 'int_parsing', 'loc': ('body', 'user_id'), 'msg': 'Input should be a valid integer, unable to parse string as an integer', 'input': 'asad'}]
+2026-06-04 00:46:34,210 INFO [cart.createCart:47] [createCart] status_code=0 event=request_received user_id=1
+2026-06-04 00:46:34,216 INFO [cart.createCart:52] [createCart] status_code=201 event=cart_created cart_id=1 user_id=1
+2026-06-04 00:47:41,685 INFO [cart.checkout:240] [checkout] status_code=0 event=request_received cart_id=1
+2026-06-04 00:47:41,685 WARNING [cart.checkout:266] [checkout] status_code=422 error=CART_EMPTY cart_id=1 cause=Cart id=1 has no items, cannot checkout
+2026-06-04 01:04:20,905 WARNING [main.validationExceptionHandler:47] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'int_parsing', 'loc': ('body', 'user_id'), 'msg': 'Input should be a valid integer, unable to parse string as an integer', 'input': 'asad'}]
+2026-06-04 01:06:08,167 INFO [cart.createCart:47] [createCart] | event=request_received | user_id=1
+2026-06-04 01:06:08,181 INFO [cart.createCart:52] [createCart] | status_code=201 | event=cart_created | cart_id=1 | user_id=1
+2026-06-04 01:17:26,289 INFO [cart.addItem:97] [addItem] | event=request_received | cart_id=4 | variant_id=1 | quantity=1
+2026-06-04 01:17:26,290 WARNING [cart.addItem:119] [addItem] | status_code=404 | error=CART_NOT_FOUND | cart_id=4 | cause=Cart with id=4 not found
+2026-06-04 01:19:34,494 WARNING [main.validationExceptionHandler:47] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/1/items | fields=['quantity'] | raw=[{'type': 'less_than_equal', 'loc': ('body', 'quantity'), 'msg': 'Input should be less than or equal to 10000', 'input': 10000000000000000000000000000000000000, 'ctx': {'le': 10000}}]
+2026-06-04 01:21:43,799 INFO [cart.addItem:97] [addItem] | event=request_received | cart_id=1 | variant_id=1 | quantity=11
+2026-06-04 01:21:43,806 INFO [cart.addItem:105] [addItem] | status_code=201 | event=item_added | cart_id=1 | item_id=1 | quantity=11
+2026-06-04 01:22:28,025 INFO [cart.removeItem:156] [removeItem] | event=request_received | cart_id=1 | item_id=2
+2026-06-04 01:22:28,025 WARNING [cart.removeItem:182] [removeItem] | status_code=404 | error=ITEM_NOT_FOUND | cart_id=1 | item_id=2 | cause=Item id=2 not found in cart id=1
+2026-06-04 01:22:59,802 INFO [cart.checkout:242] [checkout] | event=request_received | cart_id=1
+2026-06-04 01:22:59,813 INFO [cart.checkout:247] [checkout] | status_code=200 | event=checkout_success | cart_id=1
+2026-06-04 01:23:10,753 INFO [cart.createCart:47] [createCart] | event=request_received | user_id=1
+2026-06-04 01:23:10,755 INFO [cart.createCart:52] [createCart] | status_code=201 | event=cart_created | cart_id=2 | user_id=1
+2026-06-04 01:30:57,647 INFO [cart.addItem:97] [addItem] | event=request_received | cart_id=1 | variant_id=1 | quantity=11
+2026-06-04 01:30:57,647 WARNING [cart.addItem:125] [addItem] | status_code=409 | error=CART_CHECKED_OUT | cart_id=1 | cause=Cart id=1 is already checked out, cannot add items
+2026-06-04 01:33:50,373 WARNING [main.validationExceptionHandler:47] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'less_than_equal', 'loc': ('body', 'user_id'), 'msg': 'Input should be less than or equal to 2147483647', 'input': 1000000000000000000000000000000000000, 'ctx': {'le': 2147483647}}]
+2026-06-04 01:54:20,513 WARNING [main.validationExceptionHandler:47] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'int_parsing', 'loc': ('body', 'user_id'), 'msg': 'Input should be a valid integer, unable to parse string as an integer', 'input': 'rt2'}]
+2026-06-04 01:54:56,532 INFO [cart.createCart:48] [createCart] | event=request_received | user_id=1
+2026-06-04 01:54:56,546 INFO [cart.createCart:53] [createCart] | status_code=201 | event=cart_created | cart_id=1 | user_id=1
+2026-06-04 01:55:13,257 INFO [cart.createCart:48] [createCart] | event=request_received | user_id=100000000000000000000
+2026-06-04 01:55:13,257 ERROR [cart.createCart:86] [createCart] | status_code=500 | error=INTERNAL_ERROR | user_id=100000000000000000000
+Traceback (most recent call last):
+  File "C:\Users\HP 840 G7\OneDrive\Desktop\DE-internship\Data-Engineering-Training\app\api\cart.py", line 51, in createCart
+    result = service.createCart(payload.user_id)
+  File "C:\Users\HP 840 G7\OneDrive\Desktop\DE-internship\Data-Engineering-Training\app\services\cart_service.py", line 40, in createCart
+    user = self._repo.getUser(userId)
+  File "C:\Users\HP 840 G7\OneDrive\Desktop\DE-internship\Data-Engineering-Training\app\repositories\cart_repository.py", line 65, in getUser
+    cursor = self._execute(
+  File "C:\Users\HP 840 G7\OneDrive\Desktop\DE-internship\Data-Engineering-Training\app\repositories\cart_repository.py", line 56, in _execute
+    return self._conn.execute(query, params)
+OverflowError: Python int too large to convert to SQLite INTEGER
+2026-06-04 01:56:49,384 INFO [cart.addItem:98] [addItem] | event=request_received | cart_id=1 | variant_id=1 | quantity=55
+2026-06-04 01:56:49,384 WARNING [cart.addItem:139] [addItem] | status_code=422 | error=INSUFFICIENT_STOCK | cart_id=1 | variant_id=1 | quantity=55 | cause=Requested quantity=55 exceeds available stock=50 for variant_id=1
+2026-06-04 01:57:07,100 INFO [cart.addItem:98] [addItem] | event=request_received | cart_id=1 | variant_id=1 | quantity=50
+2026-06-04 01:57:07,103 INFO [cart.addItem:106] [addItem] | status_code=201 | event=item_added | cart_id=1 | item_id=1 | quantity=50
+2026-06-04 02:00:26,058 INFO [cart.addItem:98] [addItem] | event=request_received | cart_id=1 | variant_id=1 | quantity=1
+2026-06-04 02:00:26,058 WARNING [cart.addItem:139] [addItem] | status_code=422 | error=INSUFFICIENT_STOCK | cart_id=1 | variant_id=1 | quantity=1 | cause=Requested total quantity=51 exceeds available stock=50 for variant_id=1
+2026-06-04 02:20:21,815 WARNING [main.validationExceptionHandler:47] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'less_than_equal', 'loc': ('body', 'user_id'), 'msg': 'Input should be less than or equal to 9223372036854775807', 'input': 100000000000000000000000, 'ctx': {'le': 9223372036854775807}}]
