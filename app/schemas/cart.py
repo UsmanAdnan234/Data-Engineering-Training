@@ -1,8 +1,11 @@
 from pydantic import BaseModel, Field
 
+_MAX_ID = 2_147_483_647
+_MAX_QUANTITY = 10_000
+
 
 class CreateCartRequest(BaseModel):
-    user_id: int = Field(gt=0)
+    user_id: int = Field(gt=0, le=_MAX_ID)
 
 
 class CreateCartResponse(BaseModel):
@@ -12,8 +15,8 @@ class CreateCartResponse(BaseModel):
 
 
 class AddCartItemRequest(BaseModel):
-    variant_id: int = Field(gt=0)
-    quantity: int = Field(gt=0)
+    variant_id: int = Field(gt=0, le=_MAX_ID)
+    quantity: int = Field(gt=0, le=_MAX_QUANTITY)
 
 
 class AddCartItemResponse(BaseModel):

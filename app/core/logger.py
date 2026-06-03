@@ -1,9 +1,12 @@
 import logging
+import os
+
+os.makedirs("logs", exist_ok=True)
 
 logging.basicConfig(
     filename="logs/app.log",
     level=logging.INFO,
-    format="%(asctime)s %(levelname)s %(message)s"
+    format="%(asctime)s %(levelname)s [%(module)s.%(funcName)s:%(lineno)d] %(message)s"
 )
 
 logger = logging.getLogger(__name__)

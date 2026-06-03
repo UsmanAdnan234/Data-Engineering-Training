@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 
 from app.schemas.cart import (
     CreateCartRequest,
@@ -9,13 +9,10 @@ from app.schemas.cart import (
     DeleteCartResponse,
     CheckoutResponse,
 )
-
-from app.services.cart_service import CartService
-
-from app.database.connection import get_connection
-
+from app.services.cart_service import ICartService, CartService
+from app.repositories.cart_repository import CartRepository
+from app.database.connection import DatabaseConnection
 from app.core.logger import logger
-
 from app.core.exceptions import (
     UserNotFoundException,
     CartAlreadyExistsException,
@@ -24,29 +21,30 @@ from app.core.exceptions import (
     CartEmptyException,
     VariantNotFoundException,
     CartItemNotFoundException,
+    DatabaseException,
 )
 
 router = APIRouter()
 
 
-@router.post(
-    "/carts",
-    response_model=CreateCartResponse,
-    status_code=201
-)
-def create_cart(payload: CreateCartRequest):
+def getCartService() -> ICartService:
+    conn = DatabaseConnection.getInstance()
+    return CartService(CartRepository(conn))
 
-    conn = get_connection()
+
+@router.post("/carts", response_model=CreateCartResponse, status_code=201)
+def createCart(
+    payload: CreateCartRequest,
+    service: ICartService = Depends(getCartService)
+):
+    logger.info(f"[createCart] Request received | user_id={payload.user_id}")
 
     try:
+        result = service.createCart(payload.user_id)
 
-        logger.info(f"Create cart request user_id={payload.user_id}")
-
-        service = CartService(conn)
-
-        result = service.create_cart(payload.user_id)
-
-        logger.info(f"Cart created cart_id={result['cart_id']} user_id={result['user_id']}")
+        logger.info(
+            f"[createCart] Cart created | cart_id={result['cart_id']} user_id={result['user_id']}"
+        )
 
         return {
             "cart_id": result["cart_id"],
@@ -54,58 +52,45 @@ def create_cart(payload: CreateCartRequest):
             "message": "Cart created successfully"
         }
 
-    except UserNotFoundException:
-
-        logger.warning(f"User not found user_id={payload.user_id}")
-
+    except UserNotFoundException as e:
+        logger.warning(f"[createCart] User not found | user_id={payload.user_id} | cause: {e}")
         raise HTTPException(
             status_code=404,
-            detail="User not found"
+            detail=f"User with id={payload.user_id} not found"
         )
 
-    except CartAlreadyExistsException:
-
-        logger.warning(f"Cart already exists for user_id={payload.user_id}")
-
+    except CartAlreadyExistsException as e:
+        logger.warning(f"[createCart] Active cart already exists | user_id={payload.user_id} | cause: {e}")
         raise HTTPException(
             status_code=409,
-            detail="Cart already exists for this user"
+            detail="Active cart already exists for this user"
         )
 
-    except Exception:
+    except DatabaseException as e:
+        logger.error(f"[createCart] Database error | user_id={payload.user_id} | cause: {e}")
+        raise HTTPException(status_code=503, detail="Database unavailable, please try again")
 
-        logger.exception("Unexpected error while creating cart user_id=%s", payload.user_id)
-
-        raise HTTPException(
-            status_code=500,
-            detail="Internal server error"
-        )
-
-    finally:
-        conn.close()
+    except Exception as e:
+        logger.exception(f"[createCart] Unexpected error | user_id={payload.user_id} | cause: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.post(
-    "/carts/{cart_id}/items",
-    response_model=AddCartItemResponse,
-    status_code=201
-)
-def add_item(cart_id: int, payload: AddCartItemRequest):
-
-    conn = get_connection()
+@router.post("/carts/{cart_id}/items", response_model=AddCartItemResponse, status_code=201)
+def addItem(
+    cart_id: int,
+    payload: AddCartItemRequest,
+    service: ICartService = Depends(getCartService)
+):
+    logger.info(
+        f"[addItem] Request received | cart_id={cart_id} variant_id={payload.variant_id} quantity={payload.quantity}"
+    )
 
     try:
+        result = service.addItem(cart_id, payload.variant_id, payload.quantity)
 
         logger.info(
-            f"Add item request cart_id={cart_id} variant_id={payload.variant_id} quantity={payload.quantity}"
-        )
-
-        service = CartService(conn)
-
-        result = service.add_item(cart_id, payload.variant_id, payload.quantity)
-
-        logger.info(
-            f"Item added item_id={result['item_id']} cart_id={cart_id} variant_id={payload.variant_id} quantity={result['quantity']}"
+            f"[addItem] Item added | item_id={result['item_id']} cart_id={cart_id} "
+            f"variant_id={result['variant_id']} quantity={result['quantity']}"
         )
 
         return {
@@ -116,44 +101,33 @@ def add_item(cart_id: int, payload: AddCartItemRequest):
             "message": "Item added to cart"
         }
 
-    except CartNotFoundException:
+    except CartNotFoundException as e:
+        logger.warning(f"[addItem] Cart not found | cart_id={cart_id} | cause: {e}")
+        raise HTTPException(status_code=404, detail=f"Cart with id={cart_id} not found")
 
-        logger.warning(f"Cart not found cart_id={cart_id}")
-
-        raise HTTPException(
-            status_code=404,
-            detail="Cart not found"
-        )
-
-    except CartAlreadyCheckedOutException:
-
-        logger.warning(f"Attempt to modify checked-out cart cart_id={cart_id}")
-
+    except CartAlreadyCheckedOutException as e:
+        logger.warning(f"[addItem] Cart is checked out | cart_id={cart_id} | cause: {e}")
         raise HTTPException(
             status_code=409,
-            detail="Cart is already checked out"
+            detail=f"Cart with id={cart_id} is already checked out"
         )
 
-    except VariantNotFoundException:
-
-        logger.warning(f"Variant not found variant_id={payload.variant_id}")
-
+    except VariantNotFoundException as e:
+        logger.warning(
+            f"[addItem] Variant not found | variant_id={payload.variant_id} cart_id={cart_id} | cause: {e}"
+        )
         raise HTTPException(
             status_code=404,
-            detail="Product variant not found"
+            detail=f"Product variant with id={payload.variant_id} not found"
         )
 
-    except Exception:
+    except DatabaseException as e:
+        logger.error(f"[addItem] Database error | cart_id={cart_id} | cause: {e}")
+        raise HTTPException(status_code=503, detail="Database unavailable, please try again")
 
-        logger.exception("Unexpected error while adding item cart_id=%s", cart_id)
-
-        raise HTTPException(
-            status_code=500,
-            detail="Internal server error"
-        )
-
-    finally:
-        conn.close()
+    except Exception as e:
+        logger.exception(f"[addItem] Unexpected error | cart_id={cart_id} | cause: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.delete(
@@ -161,123 +135,89 @@ def add_item(cart_id: int, payload: AddCartItemRequest):
     response_model=RemoveCartItemResponse,
     status_code=200
 )
-def remove_item(cart_id: int, item_id: int):
-
-    conn = get_connection()
+def removeItem(
+    cart_id: int,
+    item_id: int,
+    service: ICartService = Depends(getCartService)
+):
+    logger.info(f"[removeItem] Request received | cart_id={cart_id} item_id={item_id}")
 
     try:
+        service.removeItem(cart_id, item_id)
 
-        logger.info(f"Remove item request cart_id={cart_id} item_id={item_id}")
-
-        service = CartService(conn)
-
-        service.remove_item(cart_id, item_id)
-
-        logger.info(f"Item removed item_id={item_id} cart_id={cart_id}")
+        logger.info(f"[removeItem] Item removed | item_id={item_id} cart_id={cart_id}")
 
         return {"message": "Item removed from cart"}
 
-    except CartNotFoundException:
+    except CartNotFoundException as e:
+        logger.warning(f"[removeItem] Cart not found | cart_id={cart_id} | cause: {e}")
+        raise HTTPException(status_code=404, detail=f"Cart with id={cart_id} not found")
 
-        logger.warning(f"Cart not found cart_id={cart_id}")
-
-        raise HTTPException(
-            status_code=404,
-            detail="Cart not found"
-        )
-
-    except CartAlreadyCheckedOutException:
-
-        logger.warning(f"Attempt to modify checked-out cart cart_id={cart_id}")
-
+    except CartAlreadyCheckedOutException as e:
+        logger.warning(f"[removeItem] Cart is checked out | cart_id={cart_id} | cause: {e}")
         raise HTTPException(
             status_code=409,
-            detail="Cart is already checked out"
+            detail=f"Cart with id={cart_id} is already checked out"
         )
 
-    except CartItemNotFoundException:
-
-        logger.warning(f"Item not found item_id={item_id} cart_id={cart_id}")
-
+    except CartItemNotFoundException as e:
+        logger.warning(
+            f"[removeItem] Item not found in cart | item_id={item_id} cart_id={cart_id} | cause: {e}"
+        )
         raise HTTPException(
             status_code=404,
-            detail="Item not found in cart"
+            detail=f"Item with id={item_id} not found in cart {cart_id}"
         )
 
-    except Exception:
+    except DatabaseException as e:
+        logger.error(f"[removeItem] Database error | cart_id={cart_id} item_id={item_id} | cause: {e}")
+        raise HTTPException(status_code=503, detail="Database unavailable, please try again")
 
-        logger.exception("Unexpected error while removing item cart_id=%s item_id=%s", cart_id, item_id)
-
-        raise HTTPException(
-            status_code=500,
-            detail="Internal server error"
+    except Exception as e:
+        logger.exception(
+            f"[removeItem] Unexpected error | cart_id={cart_id} item_id={item_id} | cause: {e}"
         )
-
-    finally:
-        conn.close()
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.delete(
-    "/carts/{cart_id}",
-    response_model=DeleteCartResponse,
-    status_code=200
-)
-def delete_cart(cart_id: int):
-
-    conn = get_connection()
+@router.delete("/carts/{cart_id}", response_model=DeleteCartResponse, status_code=200)
+def deleteCart(
+    cart_id: int,
+    service: ICartService = Depends(getCartService)
+):
+    logger.info(f"[deleteCart] Request received | cart_id={cart_id}")
 
     try:
+        service.deleteCart(cart_id)
 
-        logger.info(f"Delete cart request cart_id={cart_id}")
-
-        service = CartService(conn)
-
-        service.delete_cart(cart_id)
-
-        logger.info(f"Cart deleted cart_id={cart_id}")
+        logger.info(f"[deleteCart] Cart deleted | cart_id={cart_id}")
 
         return {"message": "Cart deleted successfully"}
 
-    except CartNotFoundException:
+    except CartNotFoundException as e:
+        logger.warning(f"[deleteCart] Cart not found | cart_id={cart_id} | cause: {e}")
+        raise HTTPException(status_code=404, detail=f"Cart with id={cart_id} not found")
 
-        logger.warning(f"Cart not found cart_id={cart_id}")
+    except DatabaseException as e:
+        logger.error(f"[deleteCart] Database error | cart_id={cart_id} | cause: {e}")
+        raise HTTPException(status_code=503, detail="Database unavailable, please try again")
 
-        raise HTTPException(
-            status_code=404,
-            detail="Cart not found"
-        )
-
-    except Exception:
-
-        logger.exception("Unexpected error while deleting cart cart_id=%s", cart_id)
-
-        raise HTTPException(
-            status_code=500,
-            detail="Internal server error"
-        )
-
-    finally:
-        conn.close()
+    except Exception as e:
+        logger.exception(f"[deleteCart] Unexpected error | cart_id={cart_id} | cause: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.post(
-    "/carts/{cart_id}/checkout",
-    response_model=CheckoutResponse,
-    status_code=200
-)
-def checkout(cart_id: int):
-
-    conn = get_connection()
+@router.post("/carts/{cart_id}/checkout", response_model=CheckoutResponse, status_code=200)
+def checkout(
+    cart_id: int,
+    service: ICartService = Depends(getCartService)
+):
+    logger.info(f"[checkout] Request received | cart_id={cart_id}")
 
     try:
-
-        logger.info(f"Checkout request cart_id={cart_id}")
-
-        service = CartService(conn)
-
         result = service.checkout(cart_id)
 
-        logger.info(f"Cart checked out cart_id={cart_id}")
+        logger.info(f"[checkout] Cart checked out | cart_id={cart_id}")
 
         return {
             "cart_id": result["cart_id"],
@@ -285,41 +225,28 @@ def checkout(cart_id: int):
             "message": "Checkout successful"
         }
 
-    except CartNotFoundException:
+    except CartNotFoundException as e:
+        logger.warning(f"[checkout] Cart not found | cart_id={cart_id} | cause: {e}")
+        raise HTTPException(status_code=404, detail=f"Cart with id={cart_id} not found")
 
-        logger.warning(f"Cart not found cart_id={cart_id}")
-
-        raise HTTPException(
-            status_code=404,
-            detail="Cart not found"
-        )
-
-    except CartAlreadyCheckedOutException:
-
-        logger.warning(f"Cart already checked out cart_id={cart_id}")
-
+    except CartAlreadyCheckedOutException as e:
+        logger.warning(f"[checkout] Cart already checked out | cart_id={cart_id} | cause: {e}")
         raise HTTPException(
             status_code=409,
-            detail="Cart is already checked out"
+            detail=f"Cart with id={cart_id} is already checked out"
         )
 
-    except CartEmptyException:
-
-        logger.warning(f"Checkout attempted on empty cart cart_id={cart_id}")
-
+    except CartEmptyException as e:
+        logger.warning(f"[checkout] Cart is empty | cart_id={cart_id} | cause: {e}")
         raise HTTPException(
             status_code=422,
-            detail="Cannot checkout an empty cart"
+            detail=f"Cart with id={cart_id} has no items, cannot checkout"
         )
 
-    except Exception:
+    except DatabaseException as e:
+        logger.error(f"[checkout] Database error | cart_id={cart_id} | cause: {e}")
+        raise HTTPException(status_code=503, detail="Database unavailable, please try again")
 
-        logger.exception("Unexpected error during checkout cart_id=%s", cart_id)
-
-        raise HTTPException(
-            status_code=500,
-            detail="Internal server error"
-        )
-
-    finally:
-        conn.close()
+    except Exception as e:
+        logger.exception(f"[checkout] Unexpected error | cart_id={cart_id} | cause: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")

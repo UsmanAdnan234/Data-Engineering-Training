@@ -1,4 +1,6 @@
-from app.repositories.cart_repository import CartRepository
+from abc import ABC, abstractmethod
+
+from app.repositories.cart_repository import ICartRepository
 from app.core.exceptions import (
     UserNotFoundException,
     CartAlreadyExistsException,
@@ -10,108 +12,115 @@ from app.core.exceptions import (
 )
 
 
-class CartService:
+class ICartService(ABC):
 
-    def __init__(self, conn):
-        self.repo = CartRepository(conn)
+    @abstractmethod
+    def createCart(self, userId: int): ...
 
-    def create_cart(self, user_id: int):
+    @abstractmethod
+    def addItem(self, cartId: int, variantId: int, quantity: int): ...
 
-        user = self.repo.get_user(user_id)
+    @abstractmethod
+    def removeItem(self, cartId: int, itemId: int): ...
 
+    @abstractmethod
+    def deleteCart(self, cartId: int): ...
+
+    @abstractmethod
+    def checkout(self, cartId: int): ...
+
+
+class CartService(ICartService):
+
+    def __init__(self, repo: ICartRepository):
+        self._repo = repo
+
+    def createCart(self, userId: int):
+        user = self._repo.getUser(userId)
         if not user:
-            raise UserNotFoundException()
+            raise UserNotFoundException(f"User with id={userId} not found")
 
-        cart = self.repo.get_cart_by_user(user_id)
+        activeCart = self._repo.getActiveCartByUser(userId)
+        if activeCart:
+            raise CartAlreadyExistsException(
+                f"User id={userId} already has an active cart (cart_id={activeCart['cart_id']})"
+            )
 
-        if cart:
-            raise CartAlreadyExistsException()
+        cartId = self._repo.createCart(userId)
+        return {"cart_id": cartId, "user_id": userId}
 
-        cart_id = self.repo.create_cart(user_id)
-
-        return {
-            "cart_id": cart_id,
-            "user_id": user_id
-        }
-
-    def add_item(self, cart_id: int, variant_id: int, quantity: int):
-
-        cart = self.repo.get_cart(cart_id)
-
+    def addItem(self, cartId: int, variantId: int, quantity: int):
+        cart = self._repo.getCart(cartId)
         if not cart:
-            raise CartNotFoundException()
+            raise CartNotFoundException(f"Cart with id={cartId} not found")
 
         if cart["status"] == "checked_out":
-            raise CartAlreadyCheckedOutException()
+            raise CartAlreadyCheckedOutException(
+                f"Cart id={cartId} is already checked out, cannot add items"
+            )
 
-        variant = self.repo.get_variant(variant_id)
-
+        variant = self._repo.getVariant(variantId)
         if not variant:
-            raise VariantNotFoundException()
+            raise VariantNotFoundException(f"Product variant with id={variantId} not found")
 
-        existing = self.repo.get_cart_item(cart_id, variant_id)
-
+        existing = self._repo.getCartItem(cartId, variantId)
         if existing:
-            new_quantity = existing["quantity"] + quantity
-            self.repo.update_quantity(existing["item_id"], new_quantity)
+            newQuantity = existing["quantity"] + quantity
+            self._repo.updateQuantity(existing["item_id"], newQuantity)
             return {
                 "item_id": existing["item_id"],
-                "cart_id": cart_id,
-                "variant_id": variant_id,
-                "quantity": new_quantity
+                "cart_id": cartId,
+                "variant_id": variantId,
+                "quantity": newQuantity
             }
 
-        item_id = self.repo.add_item(cart_id, variant_id, quantity)
-
+        itemId = self._repo.addItem(cartId, variantId, quantity)
         return {
-            "item_id": item_id,
-            "cart_id": cart_id,
-            "variant_id": variant_id,
+            "item_id": itemId,
+            "cart_id": cartId,
+            "variant_id": variantId,
             "quantity": quantity
         }
 
-    def remove_item(self, cart_id: int, item_id: int):
-
-        cart = self.repo.get_cart(cart_id)
-
+    def removeItem(self, cartId: int, itemId: int):
+        cart = self._repo.getCart(cartId)
         if not cart:
-            raise CartNotFoundException()
+            raise CartNotFoundException(f"Cart with id={cartId} not found")
 
         if cart["status"] == "checked_out":
-            raise CartAlreadyCheckedOutException()
+            raise CartAlreadyCheckedOutException(
+                f"Cart id={cartId} is already checked out, cannot remove items"
+            )
 
-        item = self.repo.get_item_in_cart(item_id, cart_id)
-
+        item = self._repo.getItemInCart(itemId, cartId)
         if not item:
-            raise CartItemNotFoundException(f"Item id {item_id} not found in cart {cart_id}")
+            raise CartItemNotFoundException(
+                f"Item id={itemId} not found in cart id={cartId}"
+            )
 
-        self.repo.delete_cart_item(item_id)
+        self._repo.deleteCartItem(itemId)
 
-    def delete_cart(self, cart_id: int):
-
-        cart = self.repo.get_cart(cart_id)
-
+    def deleteCart(self, cartId: int):
+        cart = self._repo.getCart(cartId)
         if not cart:
-            raise CartNotFoundException()
+            raise CartNotFoundException(f"Cart with id={cartId} not found")
 
-        self.repo.delete_cart(cart_id)
+        self._repo.deleteCart(cartId)
 
-    def checkout(self, cart_id: int):
-
-        cart = self.repo.get_cart(cart_id)
-
+    def checkout(self, cartId: int):
+        cart = self._repo.getCart(cartId)
         if not cart:
-            raise CartNotFoundException()
+            raise CartNotFoundException(f"Cart with id={cartId} not found")
 
         if cart["status"] == "checked_out":
-            raise CartAlreadyCheckedOutException()
+            raise CartAlreadyCheckedOutException(
+                f"Cart id={cartId} is already checked out"
+            )
 
-        if not self.repo.cart_has_items(cart_id):
-            raise CartEmptyException()
+        if not self._repo.cartHasItems(cartId):
+            raise CartEmptyException(
+                f"Cart id={cartId} has no items, cannot checkout"
+            )
 
-        self.repo.checkout_cart(cart_id)
-
-        return {
-            "cart_id": cart_id,
-            "status": "checked_out"
-        }
+        self._repo.checkoutCart(cartId)
+        return {"cart_id": cartId, "status": "checked_out"}

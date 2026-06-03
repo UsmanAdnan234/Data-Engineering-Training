@@ -1,206 +1,180 @@
 import sqlite3
+from abc import ABC, abstractmethod
+
+from app.core.exceptions import DatabaseException
 
 
-class CartRepository:
+class ICartRepository(ABC):
+
+    @abstractmethod
+    def getUser(self, userId: int): ...
+
+    @abstractmethod
+    def getActiveCartByUser(self, userId: int): ...
+
+    @abstractmethod
+    def getCart(self, cartId: int): ...
+
+    @abstractmethod
+    def createCart(self, userId: int): ...
+
+    @abstractmethod
+    def deleteCart(self, cartId: int): ...
+
+    @abstractmethod
+    def checkoutCart(self, cartId: int): ...
+
+    @abstractmethod
+    def getVariant(self, variantId: int): ...
+
+    @abstractmethod
+    def getCartItem(self, cartId: int, variantId: int): ...
+
+    @abstractmethod
+    def getItemInCart(self, itemId: int, cartId: int): ...
+
+    @abstractmethod
+    def cartHasItems(self, cartId: int) -> bool: ...
+
+    @abstractmethod
+    def addItem(self, cartId: int, variantId: int, quantity: int): ...
+
+    @abstractmethod
+    def updateQuantity(self, itemId: int, quantity: int): ...
+
+    @abstractmethod
+    def deleteCartItem(self, itemId: int): ...
+
+
+class CartRepository(ICartRepository):
 
     def __init__(self, conn):
-        self.conn = conn
+        self._conn = conn
 
-    def get_user(self, user_id: int):
+    def _execute(self, query: str, params: tuple = ()):
+        try:
+            return self._conn.execute(query, params)
+        except sqlite3.OperationalError as e:
+            raise DatabaseException(f"Operational error: {e}")
+        except sqlite3.IntegrityError as e:
+            raise DatabaseException(f"Integrity error: {e}")
+        except sqlite3.DatabaseError as e:
+            raise DatabaseException(f"Database error: {e}")
 
-        cursor = self.conn.execute(
-            """
-            SELECT user_id
-            FROM users
-            WHERE user_id = ?
-            """,
-            (user_id,)
+    def getUser(self, userId: int):
+        cursor = self._execute(
+            "SELECT user_id FROM users WHERE user_id = ?",
+            (userId,)
         )
-
         return cursor.fetchone()
 
-    def get_cart_by_user(self, user_id: int):
-
-        cursor = self.conn.execute(
+    def getActiveCartByUser(self, userId: int):
+        cursor = self._execute(
             """
             SELECT cart_id, user_id, status
             FROM carts
             WHERE user_id = ?
             AND status = 'active'
             """,
-            (user_id,)
+            (userId,)
         )
-
         return cursor.fetchone()
 
-    def get_cart(self, cart_id: int):
-
-        cursor = self.conn.execute(
+    def getCart(self, cartId: int):
+        cursor = self._execute(
             """
             SELECT cart_id, user_id, status
             FROM carts
             WHERE cart_id = ?
             """,
-            (cart_id,)
+            (cartId,)
         )
-
         return cursor.fetchone()
 
-    def create_cart(self, user_id: int):
-
-        cursor = self.conn.execute(
-            """
-            INSERT INTO carts(user_id)
-            VALUES(?)
-            """,
-            (user_id,)
+    def createCart(self, userId: int):
+        cursor = self._execute(
+            "INSERT INTO carts(user_id) VALUES(?)",
+            (userId,)
         )
-
-        self.conn.commit()
-
+        self._conn.commit()
         return cursor.lastrowid
 
-    def delete_cart(self, cart_id: int):
-
-        cursor = self.conn.execute(
-            """
-            DELETE FROM carts
-            WHERE cart_id = ?
-            """,
-            (cart_id,)
+    def deleteCart(self, cartId: int):
+        cursor = self._execute(
+            "DELETE FROM carts WHERE cart_id = ?",
+            (cartId,)
         )
-
-        self.conn.commit()
-
+        self._conn.commit()
         return cursor.rowcount
 
-    def checkout_cart(self, cart_id: int):
-
-        cursor = self.conn.execute(
-            """
-            UPDATE carts
-            SET status = 'checked_out'
-            WHERE cart_id = ?
-            """,
-            (cart_id,)
+    def checkoutCart(self, cartId: int):
+        cursor = self._execute(
+            "UPDATE carts SET status = 'checked_out' WHERE cart_id = ?",
+            (cartId,)
         )
-
-        self.conn.commit()
-
+        self._conn.commit()
         return cursor.rowcount
 
-    def get_variant(self, variant_id: int):
-
-        cursor = self.conn.execute(
-            """
-            SELECT variant_id
-            FROM product_variants
-            WHERE variant_id = ?
-            """,
-            (variant_id,)
+    def getVariant(self, variantId: int):
+        cursor = self._execute(
+            "SELECT variant_id FROM product_variants WHERE variant_id = ?",
+            (variantId,)
         )
-
         return cursor.fetchone()
 
-    def get_cart_item(self, cart_id: int, variant_id: int):
-
-        cursor = self.conn.execute(
+    def getCartItem(self, cartId: int, variantId: int):
+        cursor = self._execute(
             """
             SELECT item_id, quantity
             FROM cart_items
-            WHERE cart_id = ?
-            AND variant_id = ?
+            WHERE cart_id = ? AND variant_id = ?
             """,
-            (cart_id, variant_id)
+            (cartId, variantId)
         )
-
         return cursor.fetchone()
 
-    def get_item_in_cart(self, item_id: int, cart_id: int):
-
-        cursor = self.conn.execute(
+    def getItemInCart(self, itemId: int, cartId: int):
+        cursor = self._execute(
             """
             SELECT item_id
             FROM cart_items
-            WHERE item_id = ?
-            AND cart_id = ?
+            WHERE item_id = ? AND cart_id = ?
             """,
-            (item_id, cart_id)
+            (itemId, cartId)
         )
-
         return cursor.fetchone()
 
-    def cart_has_items(self, cart_id: int) -> bool:
-
-        cursor = self.conn.execute(
-            """
-            SELECT COUNT(*) AS count
-            FROM cart_items
-            WHERE cart_id = ?
-            """,
-            (cart_id,)
+    def cartHasItems(self, cartId: int) -> bool:
+        cursor = self._execute(
+            "SELECT COUNT(*) AS count FROM cart_items WHERE cart_id = ?",
+            (cartId,)
         )
-
         row = cursor.fetchone()
-
         return row["count"] > 0
 
-    def add_item(self, cart_id: int, variant_id: int, quantity: int):
-
-        cursor = self.conn.execute(
+    def addItem(self, cartId: int, variantId: int, quantity: int):
+        cursor = self._execute(
             """
             INSERT INTO cart_items (cart_id, variant_id, quantity)
             VALUES (?, ?, ?)
             """,
-            (cart_id, variant_id, quantity)
+            (cartId, variantId, quantity)
         )
-
-        self.conn.commit()
-
+        self._conn.commit()
         return cursor.lastrowid
 
-    def update_quantity(self, item_id: int, quantity: int):
-
-        cursor = self.conn.execute(
-            """
-            UPDATE cart_items
-            SET quantity = ?
-            WHERE item_id = ?
-            """,
-            (quantity, item_id)
+    def updateQuantity(self, itemId: int, quantity: int):
+        cursor = self._execute(
+            "UPDATE cart_items SET quantity = ? WHERE item_id = ?",
+            (quantity, itemId)
         )
-
-        self.conn.commit()
-
+        self._conn.commit()
         return cursor.rowcount
 
-    def delete_cart_item(self, item_id: int):
-
-        cursor = self.conn.execute(
-            """
-            DELETE FROM cart_items
-            WHERE item_id = ?
-            """,
-            (item_id,)
+    def deleteCartItem(self, itemId: int):
+        cursor = self._execute(
+            "DELETE FROM cart_items WHERE item_id = ?",
+            (itemId,)
         )
-
-        self.conn.commit()
-
+        self._conn.commit()
         return cursor.rowcount
-
-    def clear_cart(self, cart_id: int):
-
-        cursor = self.conn.execute(
-            """
-            DELETE FROM cart_items
-            WHERE cart_id = ?
-            """,
-            (cart_id,)
-        )
-
-        self.conn.commit()
-
-        return cursor.rowcount
-
-    def close(self):
-        self.conn.close()
