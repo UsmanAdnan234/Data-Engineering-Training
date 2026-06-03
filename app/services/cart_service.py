@@ -83,7 +83,7 @@ class CartService:
         item = self.repo.get_item_in_cart(item_id, cart_id)
 
         if not item:
-            raise CartItemNotFoundException()
+            raise CartItemNotFoundException(f"Item id {item_id} not found in cart {cart_id}")
 
         self.repo.delete_cart_item(item_id)
 

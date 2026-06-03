@@ -430,3 +430,215 @@ Removes an item from a cart.
 DELETE /carts/{cart_id}/items
 
 Removes all items from a cart.
+
+---
+
+# Cart API Implementation
+
+This section explains how the cart API is built, how it works, and what decisions were made during implementation.
+
+---
+
+## Project Structure
+
+The code is split into four layers. Each layer has one job:
+
+```
+app/
+├── api/            → Receives HTTP requests, sends HTTP responses
+├── services/       → Business logic (rules like "cart must be active to add items")
+├── repositories/   → Talks to the database (all SQL lives here)
+├── schemas/        → Defines what request and response data looks like
+└── core/
+    ├── exceptions.py  → Custom error types
+    ├── logger.py      → Logging setup
+    └── config.py      → Database name config
+```
+
+The flow for every request is:
+
+```
+Request → API → Service → Repository → Database
+Response ← API ← Service ← Repository ← Database
+```
+
+This separation means if the database changes, only the repository needs updating. The API and service layers stay the same.
+
+---
+
+## Cart Lifecycle
+
+A cart has two statuses:
+
+```
+active  →  checked_out
+```
+
+- A cart starts as `active` when created.
+- After checkout, it becomes `checked_out` and can no longer be modified.
+- A user can create a new `active` cart after their previous one is checked out.
+- A user can only have **one active cart at a time**.
+
+The `status` column lives in the `carts` table because it describes the cart itself, not the items inside it.
+
+> **Why user_id is not UNIQUE in carts:** Originally the schema had `UNIQUE(user_id)` in the carts table, which meant a user could only ever have one cart total — even after checkout. This was removed so users can create a new cart after checking out. The one-active-cart rule is enforced in the service layer instead.
+
+---
+
+## Implemented Endpoints
+
+### POST /carts
+Creates a new cart for a user.
+
+- Checks the user exists.
+- Checks the user does not already have an **active** cart.
+- Creates the cart with status `active`.
+
+**Request:**
+```json
+{ "user_id": 1 }
+```
+
+**Response (201):**
+```json
+{ "cart_id": 1, "user_id": 1, "message": "Cart created successfully" }
+```
+
+---
+
+### POST /carts/{cart_id}/items
+Adds a product variant to a cart.
+
+- Checks the cart exists.
+- Checks the cart is `active` (not checked out).
+- Checks the product variant exists.
+- If the same variant is already in the cart, the quantity is added to the existing amount instead of creating a duplicate.
+
+**Request:**
+```json
+{ "variant_id": 2, "quantity": 3 }
+```
+
+**Response (201):**
+```json
+{ "item_id": 1, "cart_id": 1, "variant_id": 2, "quantity": 3, "message": "Item added to cart" }
+```
+
+---
+
+### DELETE /carts/{cart_id}/items/{item_id}
+Removes a specific item from a cart.
+
+- Checks the cart exists.
+- Checks the cart is `active`.
+- Checks the item belongs to that cart.
+- Deletes the item.
+
+**Response (200):**
+```json
+{ "message": "Item removed from cart" }
+```
+
+---
+
+### DELETE /carts/{cart_id}
+Deletes a cart completely.
+
+- Checks the cart exists.
+- Deletes the cart. All items inside are deleted automatically by the database (`ON DELETE CASCADE`).
+
+**Response (200):**
+```json
+{ "message": "Cart deleted successfully" }
+```
+
+---
+
+### POST /carts/{cart_id}/checkout
+Checks out a cart.
+
+- Checks the cart exists.
+- Checks the cart is `active` (cannot checkout twice).
+- Checks the cart has at least one item (cannot checkout an empty cart).
+- Changes the cart status to `checked_out`.
+
+**Response (200):**
+```json
+{ "cart_id": 1, "status": "checked_out", "message": "Checkout successful" }
+```
+
+---
+
+## Error Codes
+
+| Code | Meaning | Example |
+|------|---------|---------|
+| 404 | Something was not found | User, cart, variant, or item does not exist |
+| 409 | Conflict with current state | Cart already exists, or cart is already checked out |
+| 422 | Request is valid but cannot be processed | Trying to checkout an empty cart |
+| 500 | Unexpected server error | Database failure or unhandled exception |
+
+---
+
+## Logging
+
+Every request and important event is logged to `logs/app.log`.
+
+- **INFO** — normal events (request received, cart created, item added)
+- **WARNING** — expected failures (cart not found, already checked out)
+- **EXCEPTION** — unexpected errors with full traceback for debugging
+
+**What is NOT logged:** email addresses, phone numbers, and names are never written to logs to protect user privacy. Only IDs, quantities, and statuses are logged.
+
+Example log entries:
+```
+2026-06-03 10:00:01,123 INFO Create cart request user_id=1
+2026-06-03 10:00:01,130 INFO Cart created cart_id=3 user_id=1
+2026-06-03 10:00:05,210 WARNING Cart not found cart_id=99
+```
+
+---
+
+## Setup and Running
+
+**1. Install dependencies:**
+```bash
+pip install fastapi uvicorn
+```
+
+**2. Initialize the database (first time only):**
+```bash
+python init_db.py
+```
+
+**3. Seed sample data (users, products, variants):**
+```bash
+python check_db.py
+```
+
+**4. If you already have a database from before the `status` column was added, run the migration instead of reinitializing:**
+```bash
+python migrate_db.py
+```
+
+**5. Start the server:**
+```bash
+uvicorn app.main:app --reload
+```
+
+**6. Open Swagger UI to test the endpoints:**
+```
+http://127.0.0.1:8000/docs
+```
+
+---
+
+## Sample Test Flow
+
+```
+1. POST /carts           { "user_id": 1 }              → cart_id = 1
+2. POST /carts/1/items   { "variant_id": 1, "quantity": 2 }
+3. POST /carts/1/items   { "variant_id": 4, "quantity": 1 }
+4. POST /carts/1/checkout                              → status = checked_out
+5. POST /carts           { "user_id": 1 }              → cart_id = 2 (new active cart)
+```
