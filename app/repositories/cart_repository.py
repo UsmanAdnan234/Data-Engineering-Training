@@ -45,6 +45,9 @@ class ICartRepository(ABC):
     @abstractmethod
     def deleteCartItem(self, itemId: int): ...
 
+    @abstractmethod
+    def reduceStock(self, cartId: int): ...
+
 
 class CartRepository(ICartRepository):
 
@@ -175,6 +178,24 @@ class CartRepository(ICartRepository):
         cursor = self._execute(
             "DELETE FROM cart_items WHERE item_id = ?",
             (itemId,)
+        )
+        self._conn.commit()
+        return cursor.rowcount
+
+    def reduceStock(self, cartId: int):
+        cursor = self._execute(
+            """
+            UPDATE product_variants
+            SET stock = stock - (
+                SELECT quantity FROM cart_items
+                WHERE variant_id = product_variants.variant_id
+                AND cart_id = ?
+            )
+            WHERE variant_id IN (
+                SELECT variant_id FROM cart_items WHERE cart_id = ?
+            )
+            """,
+            (cartId, cartId)
         )
         self._conn.commit()
         return cursor.rowcount

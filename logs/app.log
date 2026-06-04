@@ -65616,3 +65616,40 @@ OverflowError: Python int too large to convert to SQLite INTEGER
 2026-06-04 02:00:26,058 INFO [cart.addItem:98] [addItem] | event=request_received | cart_id=1 | variant_id=1 | quantity=1
 2026-06-04 02:00:26,058 WARNING [cart.addItem:139] [addItem] | status_code=422 | error=INSUFFICIENT_STOCK | cart_id=1 | variant_id=1 | quantity=1 | cause=Requested total quantity=51 exceeds available stock=50 for variant_id=1
 2026-06-04 02:20:21,815 WARNING [main.validationExceptionHandler:47] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'less_than_equal', 'loc': ('body', 'user_id'), 'msg': 'Input should be less than or equal to 9223372036854775807', 'input': 100000000000000000000000, 'ctx': {'le': 9223372036854775807}}]
+2026-06-04 17:54:59,696 WARNING [main.validationExceptionHandler:47] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'less_than_equal', 'loc': ('body', 'user_id'), 'msg': 'Input should be less than or equal to 9223372036854775807', 'input': 1000000000000000000000000000000000, 'ctx': {'le': 9223372036854775807}}]
+2026-06-04 17:55:55,968 WARNING [main.validationExceptionHandler:47] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'int_parsing', 'loc': ('body', 'user_id'), 'msg': 'Input should be a valid integer, unable to parse string as an integer', 'input': 'd1'}]
+2026-06-04 17:56:26,178 WARNING [main.validationExceptionHandler:47] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'greater_than', 'loc': ('body', 'user_id'), 'msg': 'Input should be greater than 0', 'input': -1, 'ctx': {'gt': 0}}]
+2026-06-04 17:56:48,637 INFO [cart.createCart:51] [createCart] | event=request_received | user_id=1
+2026-06-04 17:56:48,644 INFO [cart.createCart:56] [createCart] | status_code=201 | event=cart_created | cart_id=1 | user_id=1
+2026-06-04 17:57:10,323 INFO [cart.createCart:51] [createCart] | event=request_received | user_id=1
+2026-06-04 17:57:10,323 WARNING [cart.createCart:75] [createCart] | status_code=409 | error=CART_ALREADY_EXISTS | user_id=1 | cause=User id=1 already has an active cart (cart_id=1)
+2026-06-04 17:59:35,715 INFO [cart.addItem:101] [addItem] | event=request_received | cart_id=1 | variant_id=1 | quantity=50
+2026-06-04 17:59:35,718 INFO [cart.addItem:109] [addItem] | status_code=201 | event=item_added | cart_id=1 | item_id=1 | quantity=50
+2026-06-04 18:00:32,636 INFO [cart.addItem:101] [addItem] | event=request_received | cart_id=1 | variant_id=1 | quantity=50
+2026-06-04 18:00:32,637 WARNING [cart.addItem:142] [addItem] | status_code=422 | error=INSUFFICIENT_STOCK | cart_id=1 | variant_id=1 | quantity=50 | cause=Requested total quantity=100 exceeds available stock=50 for variant_id=1
+2026-06-04 18:06:04,673 WARNING [main.validationExceptionHandler:47] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/-1/items | fields=['cart_id'] | raw=[{'type': 'greater_than', 'loc': ('path', 'cart_id'), 'msg': 'Input should be greater than 0', 'input': '-1', 'ctx': {'gt': 0}}]
+2026-06-04 18:06:13,913 INFO [cart.addItem:101] [addItem] | event=request_received | cart_id=1 | variant_id=2 | quantity=10
+2026-06-04 18:06:13,916 INFO [cart.addItem:109] [addItem] | status_code=201 | event=item_added | cart_id=1 | item_id=2 | quantity=10
+2026-06-04 18:07:10,846 WARNING [main.validationExceptionHandler:47] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=DELETE | path=/carts/1/items/0 | fields=['item_id'] | raw=[{'type': 'greater_than', 'loc': ('path', 'item_id'), 'msg': 'Input should be greater than 0', 'input': '0', 'ctx': {'gt': 0}}]
+2026-06-04 18:07:29,392 INFO [cart.deleteCart:219] [deleteCart] | event=request_received | cart_id=2
+2026-06-04 18:07:29,392 WARNING [cart.deleteCart:229] [deleteCart] | status_code=404 | error=CART_NOT_FOUND | cart_id=2 | cause=Cart with id=2 not found
+2026-06-04 18:07:53,390 INFO [cart.checkout:253] [checkout] | event=request_received | cart_id=3
+2026-06-04 18:07:53,390 WARNING [cart.checkout:267] [checkout] | status_code=404 | error=CART_NOT_FOUND | cart_id=3 | cause=Cart with id=3 not found
+2026-06-04 18:08:47,447 INFO [cart.checkout:253] [checkout] | event=request_received | cart_id=1
+2026-06-04 18:08:47,450 INFO [cart.checkout:258] [checkout] | status_code=200 | event=checkout_success | cart_id=1
+2026-06-04 18:09:44,893 INFO [cart.createCart:51] [createCart] | event=request_received | user_id=1
+2026-06-04 18:09:44,897 INFO [cart.createCart:56] [createCart] | status_code=201 | event=cart_created | cart_id=2 | user_id=1
+2026-06-04 18:09:53,925 INFO [cart.addItem:101] [addItem] | event=request_received | cart_id=1 | variant_id=1 | quantity=50
+2026-06-04 18:09:53,925 WARNING [cart.addItem:129] [addItem] | status_code=409 | error=CART_CHECKED_OUT | cart_id=1 | cause=Cart id=1 is already checked out, cannot add items
+2026-06-04 18:10:23,423 INFO [cart.addItem:101] [addItem] | event=request_received | cart_id=2 | variant_id=1 | quantity=50
+2026-06-04 18:10:23,425 INFO [cart.addItem:109] [addItem] | status_code=201 | event=item_added | cart_id=2 | item_id=3 | quantity=50
+2026-06-04 18:12:38,788 INFO [cart.addItem:101] [addItem] | event=request_received | cart_id=2 | variant_id=1 | quantity=50
+2026-06-04 18:12:38,788 WARNING [cart.addItem:142] [addItem] | status_code=422 | error=INSUFFICIENT_STOCK | cart_id=2 | variant_id=1 | quantity=50 | cause=Requested total quantity=100 exceeds available stock=50 for variant_id=1
+2026-06-04 18:33:21,240 INFO [cart.createCart:51] [createCart] | event=request_received | user_id=1
+2026-06-04 18:33:21,244 INFO [cart.createCart:56] [createCart] | status_code=201 | event=cart_created | cart_id=1 | user_id=1
+2026-06-04 18:33:30,462 INFO [cart.addItem:101] [addItem] | event=request_received | cart_id=1 | variant_id=1 | quantity=50
+2026-06-04 18:33:30,465 INFO [cart.addItem:109] [addItem] | status_code=201 | event=item_added | cart_id=1 | item_id=1 | quantity=50
+2026-06-04 18:33:47,111 INFO [cart.addItem:101] [addItem] | event=request_received | cart_id=1 | variant_id=1 | quantity=55
+2026-06-04 18:33:47,111 WARNING [cart.addItem:142] [addItem] | status_code=422 | error=INSUFFICIENT_STOCK | cart_id=1 | variant_id=1 | quantity=55 | cause=Requested total quantity=105 exceeds available stock=50 for variant_id=1
+2026-06-04 18:34:16,351 INFO [cart.checkout:253] [checkout] | event=request_received | cart_id=1
+2026-06-04 18:34:16,361 INFO [cart.checkout:258] [checkout] | status_code=200 | event=checkout_success | cart_id=1

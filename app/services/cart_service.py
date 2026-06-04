@@ -135,4 +135,5 @@ class CartService(ICartService):
             )
 
         self._repo.checkoutCart(cartId)
+        self._repo.reduceStock(cartId)
         return {"cart_id": cartId, "status": "checked_out"}

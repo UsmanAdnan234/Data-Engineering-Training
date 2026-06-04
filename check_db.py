@@ -4,7 +4,7 @@ from app.core.config import DB_NAME
 conn = sqlite3.connect(DB_NAME)
 
 # --- Clear all tables ---
-conn.execute("DELETE FROM cart_items")
+"""conn.execute("DELETE FROM cart_items")
 conn.execute("DELETE FROM carts")
 conn.execute("DELETE FROM product_variants")
 conn.execute("DELETE FROM products")
@@ -48,7 +48,7 @@ conn.executemany(
 )
 
 conn.commit()
-
+"""
 # --- Print seeded data ---
 print("=== Users ===")
 for row in conn.execute("SELECT user_id, name, email FROM users").fetchall():
@@ -59,10 +59,23 @@ for row in conn.execute("SELECT * FROM products").fetchall():
     print(row)
 
 print("\n=== Product Variants ===")
-for row in conn.execute(
-    "SELECT v.variant_id, p.name, v.color, v.size, v.price, v.stock "
-    "FROM product_variants v JOIN products p ON v.product_id = p.product_id"
-).fetchall():
+rows = conn.execute("""
+    SELECT
+        v.variant_id,
+        p.product_id,
+        p.name,
+        v.variant_id,
+        v.color,
+        v.size,
+        v.price,
+        v.stock
+    FROM products p
+    JOIN product_variants v
+      ON p.product_id = v.product_id
+    ORDER BY p.product_id, v.variant_id
+""").fetchall()
+
+for row in rows:
     print(row)
 
 print("\n=== Carts ===")
