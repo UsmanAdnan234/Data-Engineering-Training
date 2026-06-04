@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, Path
+﻿from fastapi import APIRouter, HTTPException, Depends, Path
 from typing import Annotated
 
 SQLITE_INT_MAX = 9223372036854775807
@@ -41,10 +41,6 @@ def _err(statusCode: int, code: str, message: str):
         detail={"error": code, "message": message}
     )
 
-
-# =========================
-# CREATE CART
-# =========================
 @router.post("/carts", response_model=CreateCartResponse, status_code=201)
 def createCart(payload: CreateCartRequest, service: ICartService = Depends(getCartService)):
 
@@ -92,9 +88,6 @@ def createCart(payload: CreateCartRequest, service: ICartService = Depends(getCa
         _err(500, "INTERNAL_ERROR", "Unexpected error")
 
 
-# =========================
-# ADD ITEM
-# =========================
 @router.post("/carts/{cart_id}/items", response_model=AddCartItemResponse, status_code=201)
 def addItem(cart_id: Annotated[int, Path(gt=0, le=SQLITE_INT_MAX)], payload: AddCartItemRequest, service: ICartService = Depends(getCartService)):
 
@@ -158,9 +151,6 @@ def addItem(cart_id: Annotated[int, Path(gt=0, le=SQLITE_INT_MAX)], payload: Add
         _err(500, "INTERNAL_ERROR", "Unexpected error")
 
 
-# =========================
-# REMOVE ITEM
-# =========================
 @router.delete("/carts/{cart_id}/items/{item_id}", response_model=RemoveCartItemResponse, status_code=200)
 def removeItem(cart_id: Annotated[int, Path(gt=0, le=SQLITE_INT_MAX)], item_id: Annotated[int, Path(gt=0, le=SQLITE_INT_MAX)], service: ICartService = Depends(getCartService)):
 
@@ -210,9 +200,6 @@ def removeItem(cart_id: Annotated[int, Path(gt=0, le=SQLITE_INT_MAX)], item_id: 
         _err(500, "INTERNAL_ERROR", "Unexpected error")
 
 
-# =========================
-# DELETE CART
-# =========================
 @router.delete("/carts/{cart_id}", response_model=DeleteCartResponse, status_code=200)
 def deleteCart(cart_id: Annotated[int, Path(gt=0, le=SQLITE_INT_MAX)], service: ICartService = Depends(getCartService)):
 
@@ -244,9 +231,6 @@ def deleteCart(cart_id: Annotated[int, Path(gt=0, le=SQLITE_INT_MAX)], service: 
         _err(500, "INTERNAL_ERROR", "Unexpected error")
 
 
-# =========================
-# CHECKOUT
-# =========================
 @router.post("/carts/{cart_id}/checkout", response_model=CheckoutResponse, status_code=200)
 def checkout(cart_id: Annotated[int, Path(gt=0, le=SQLITE_INT_MAX)], service: ICartService = Depends(getCartService)):
 

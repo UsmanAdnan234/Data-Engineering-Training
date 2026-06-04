@@ -1,0 +1,1328 @@
+{
+  "info": {
+    "name": "Cart API — 50 Test Cases",
+    "_postman_id": "cart-api-test-suite-v1",
+    "description": "Complete automated test suite for the Shopping Cart API.\n\nBEFORE RUNNING:\n1. Reseed DB: uncomment the clear+insert block in check_db.py and run it\n2. Start server: uvicorn app.main:app --reload\n3. In Postman: open this collection > click Run > Run All\n\nRequests labelled [SETUP] are not test cases — they create state needed by the next test. They must pass for subsequent tests to work.\n\nVariables are saved automatically between requests. Do not change collection variables manually during a run.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl",              "value": "http://127.0.0.1:8000" },
+    { "key": "cart_id_user1",        "value": "" },
+    { "key": "cart_id_user2",        "value": "" },
+    { "key": "cart_id_checked_out",  "value": "" },
+    { "key": "cart_id_to_delete",    "value": "" },
+    { "key": "cart_id_new_user1",    "value": "" },
+    { "key": "cart_id_empty",        "value": "" },
+    { "key": "cart_id_lifecycle",    "value": "" },
+    { "key": "item_id_1",            "value": "" },
+    { "key": "item_id_2",            "value": "" },
+    { "key": "item_id_checked_out",  "value": "" },
+    { "key": "item_id_lifecycle",    "value": "" }
+  ],
+  "item": [
+
+    {
+      "name": "Group A — Create Cart",
+      "item": [
+
+        {
+          "name": "TC-01 — Create cart for valid user",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/carts", "host": ["{{baseUrl}}"], "path": ["carts"] },
+            "body": { "mode": "raw", "raw": "{\"user_id\": 1}", "options": { "raw": { "language": "json" } } }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 201', () => pm.response.to.have.status(201));",
+              "pm.test('Body correct, saves cart_id_user1', () => {",
+              "    const b = pm.response.json();",
+              "    pm.expect(b.cart_id).to.be.a('number');",
+              "    pm.expect(b.user_id).to.equal(1);",
+              "    pm.expect(b.message).to.equal('Cart created successfully');",
+              "    pm.collectionVariables.set('cart_id_user1', b.cart_id);",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "TC-02 — Create cart for different valid user",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/carts", "host": ["{{baseUrl}}"], "path": ["carts"] },
+            "body": { "mode": "raw", "raw": "{\"user_id\": 2}", "options": { "raw": { "language": "json" } } }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 201', () => pm.response.to.have.status(201));",
+              "pm.test('Body correct, saves cart_id_user2', () => {",
+              "    const b = pm.response.json();",
+              "    pm.expect(b.cart_id).to.be.a('number');",
+              "    pm.expect(b.user_id).to.equal(2);",
+              "    pm.collectionVariables.set('cart_id_user2', b.cart_id);",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "TC-03 — Duplicate cart (user already has active cart)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/carts", "host": ["{{baseUrl}}"], "path": ["carts"] },
+            "body": { "mode": "raw", "raw": "{\"user_id\": 1}", "options": { "raw": { "language": "json" } } }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 409', () => pm.response.to.have.status(409));",
+              "pm.test('Error CART_ALREADY_EXISTS', () => {",
+              "    const b = pm.response.json();",
+              "    pm.expect(b.error).to.equal('CART_ALREADY_EXISTS');",
+              "    pm.expect(b.message).to.equal('Active cart already exists');",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "TC-04 — Non-existent user",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/carts", "host": ["{{baseUrl}}"], "path": ["carts"] },
+            "body": { "mode": "raw", "raw": "{\"user_id\": 999}", "options": { "raw": { "language": "json" } } }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 404', () => pm.response.to.have.status(404));",
+              "pm.test('Error USER_NOT_FOUND', () => {",
+              "    const b = pm.response.json();",
+              "    pm.expect(b.error).to.equal('USER_NOT_FOUND');",
+              "    pm.expect(b.message).to.equal('User not found');",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "TC-05 — user_id is zero",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/carts", "host": ["{{baseUrl}}"], "path": ["carts"] },
+            "body": { "mode": "raw", "raw": "{\"user_id\": 0}", "options": { "raw": { "language": "json" } } }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 422', () => pm.response.to.have.status(422));",
+              "pm.test('VALIDATION_ERROR on user_id', () => {",
+              "    const b = pm.response.json();",
+              "    pm.expect(b.error).to.equal('VALIDATION_ERROR');",
+              "    pm.expect(b.details[0].field).to.equal('user_id');",
+              "    pm.expect(b.details[0].message).to.equal('Must be greater than 0');",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "TC-06 — user_id is negative",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/carts", "host": ["{{baseUrl}}"], "path": ["carts"] },
+            "body": { "mode": "raw", "raw": "{\"user_id\": -5}", "options": { "raw": { "language": "json" } } }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 422', () => pm.response.to.have.status(422));",
+              "pm.test('VALIDATION_ERROR on user_id', () => {",
+              "    const b = pm.response.json();",
+              "    pm.expect(b.error).to.equal('VALIDATION_ERROR');",
+              "    pm.expect(b.details[0].field).to.equal('user_id');",
+              "    pm.expect(b.details[0].message).to.equal('Must be greater than 0');",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "TC-07 — user_id is a string",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/carts", "host": ["{{baseUrl}}"], "path": ["carts"] },
+            "body": { "mode": "raw", "raw": "{\"user_id\": \"abc\"}", "options": { "raw": { "language": "json" } } }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 422', () => pm.response.to.have.status(422));",
+              "pm.test('VALIDATION_ERROR, must be integer', () => {",
+              "    const b = pm.response.json();",
+              "    pm.expect(b.error).to.equal('VALIDATION_ERROR');",
+              "    pm.expect(b.details[0].field).to.equal('user_id');",
+              "    pm.expect(b.details[0].message).to.equal('Must be a valid integer');",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "TC-08 — user_id missing from body",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/carts", "host": ["{{baseUrl}}"], "path": ["carts"] },
+            "body": { "mode": "raw", "raw": "{}", "options": { "raw": { "language": "json" } } }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 422', () => pm.response.to.have.status(422));",
+              "pm.test('VALIDATION_ERROR, field required', () => {",
+              "    const b = pm.response.json();",
+              "    pm.expect(b.error).to.equal('VALIDATION_ERROR');",
+              "    pm.expect(b.details[0].field).to.equal('user_id');",
+              "    pm.expect(b.details[0].message).to.equal('This field is required');",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "TC-09 — user_id overflow (exceeds SQLite max integer)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/carts", "host": ["{{baseUrl}}"], "path": ["carts"] },
+            "body": { "mode": "raw", "raw": "{\"user_id\": 99999999999999999999}", "options": { "raw": { "language": "json" } } }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 422', () => pm.response.to.have.status(422));",
+              "pm.test('VALIDATION_ERROR, out of range', () => {",
+              "    const b = pm.response.json();",
+              "    pm.expect(b.error).to.equal('VALIDATION_ERROR');",
+              "    pm.expect(b.details[0].field).to.equal('user_id');",
+              "    pm.expect(b.details[0].message).to.equal('Value is out of valid range');",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "TC-10 — user_id is a decimal number",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/carts", "host": ["{{baseUrl}}"], "path": ["carts"] },
+            "body": { "mode": "raw", "raw": "{\"user_id\": 1.5}", "options": { "raw": { "language": "json" } } }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 422', () => pm.response.to.have.status(422));",
+              "pm.test('VALIDATION_ERROR, must be integer', () => {",
+              "    const b = pm.response.json();",
+              "    pm.expect(b.error).to.equal('VALIDATION_ERROR');",
+              "    pm.expect(b.details[0].field).to.equal('user_id');",
+              "    pm.expect(b.details[0].message).to.equal('Must be a valid integer');",
+              "});"
+            ]}
+          }]
+        }
+
+      ]
+    },
+
+    {
+      "name": "Group B — Add Item",
+      "item": [
+
+        {
+          "name": "TC-11 — Add new item to cart",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/carts/{{cart_id_user1}}/items", "host": ["{{baseUrl}}"], "path": ["carts", "{{cart_id_user1}}", "items"] },
+            "body": { "mode": "raw", "raw": "{\"variant_id\": 1, \"quantity\": 2}", "options": { "raw": { "language": "json" } } }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 201', () => pm.response.to.have.status(201));",
+              "pm.test('Body correct, saves item_id_1', () => {",
+              "    const b = pm.response.json();",
+              "    pm.expect(b.item_id).to.be.a('number');",
+              "    pm.expect(b.variant_id).to.equal(1);",
+              "    pm.expect(b.quantity).to.equal(2);",
+              "    pm.expect(b.message).to.equal('Item added to cart');",
+              "    pm.collectionVariables.set('item_id_1', b.item_id);",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "TC-12 — Add same variant again (quantity accumulates)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/carts/{{cart_id_user1}}/items", "host": ["{{baseUrl}}"], "path": ["carts", "{{cart_id_user1}}", "items"] },
+            "body": { "mode": "raw", "raw": "{\"variant_id\": 1, \"quantity\": 3}", "options": { "raw": { "language": "json" } } }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 201', () => pm.response.to.have.status(201));",
+              "pm.test('Quantity accumulated to 5 (2+3), same item_id', () => {",
+              "    const b = pm.response.json();",
+              "    pm.expect(b.item_id).to.equal(parseInt(pm.collectionVariables.get('item_id_1')));",
+              "    pm.expect(b.variant_id).to.equal(1);",
+              "    pm.expect(b.quantity).to.equal(5);",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "TC-13 — Add different variant to same cart",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/carts/{{cart_id_user1}}/items", "host": ["{{baseUrl}}"], "path": ["carts", "{{cart_id_user1}}", "items"] },
+            "body": { "mode": "raw", "raw": "{\"variant_id\": 4, \"quantity\": 1}", "options": { "raw": { "language": "json" } } }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 201', () => pm.response.to.have.status(201));",
+              "pm.test('New item created, saves item_id_2', () => {",
+              "    const b = pm.response.json();",
+              "    pm.expect(b.item_id).to.be.a('number');",
+              "    pm.expect(b.variant_id).to.equal(4);",
+              "    pm.expect(b.quantity).to.equal(1);",
+              "    pm.collectionVariables.set('item_id_2', b.item_id);",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "TC-14 — Add quantity exactly equal to stock (variant 7, stock=5)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/carts/{{cart_id_user1}}/items", "host": ["{{baseUrl}}"], "path": ["carts", "{{cart_id_user1}}", "items"] },
+            "body": { "mode": "raw", "raw": "{\"variant_id\": 7, \"quantity\": 5}", "options": { "raw": { "language": "json" } } }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 201', () => pm.response.to.have.status(201));",
+              "pm.test('Exact stock quantity accepted', () => {",
+              "    const b = pm.response.json();",
+              "    pm.expect(b.variant_id).to.equal(7);",
+              "    pm.expect(b.quantity).to.equal(5);",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "TC-15 — Add item to non-existent cart",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/carts/9999/items", "host": ["{{baseUrl}}"], "path": ["carts", "9999", "items"] },
+            "body": { "mode": "raw", "raw": "{\"variant_id\": 1, \"quantity\": 1}", "options": { "raw": { "language": "json" } } }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 404', () => pm.response.to.have.status(404));",
+              "pm.test('Error CART_NOT_FOUND', () => {",
+              "    const b = pm.response.json();",
+              "    pm.expect(b.error).to.equal('CART_NOT_FOUND');",
+              "    pm.expect(b.message).to.equal('Cart not found');",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "TC-16 — Add non-existent variant to cart",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/carts/{{cart_id_user1}}/items", "host": ["{{baseUrl}}"], "path": ["carts", "{{cart_id_user1}}", "items"] },
+            "body": { "mode": "raw", "raw": "{\"variant_id\": 9999, \"quantity\": 1}", "options": { "raw": { "language": "json" } } }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 404', () => pm.response.to.have.status(404));",
+              "pm.test('Error VARIANT_NOT_FOUND', () => {",
+              "    const b = pm.response.json();",
+              "    pm.expect(b.error).to.equal('VARIANT_NOT_FOUND');",
+              "    pm.expect(b.message).to.equal('Variant not found');",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "[SETUP for TC-17] Create cart for user 3",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/carts", "host": ["{{baseUrl}}"], "path": ["carts"] },
+            "body": { "mode": "raw", "raw": "{\"user_id\": 3}", "options": { "raw": { "language": "json" } } }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('SETUP OK: Status 201', () => pm.response.to.have.status(201));",
+              "pm.test('SETUP: Saves cart_id_checked_out', () => {",
+              "    const b = pm.response.json();",
+              "    pm.expect(b.cart_id).to.be.a('number');",
+              "    pm.collectionVariables.set('cart_id_checked_out', b.cart_id);",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "[SETUP for TC-17] Add item to user 3 cart",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/carts/{{cart_id_checked_out}}/items", "host": ["{{baseUrl}}"], "path": ["carts", "{{cart_id_checked_out}}", "items"] },
+            "body": { "mode": "raw", "raw": "{\"variant_id\": 2, \"quantity\": 1}", "options": { "raw": { "language": "json" } } }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('SETUP OK: Status 201', () => pm.response.to.have.status(201));",
+              "pm.test('SETUP: Saves item_id_checked_out', () => {",
+              "    const b = pm.response.json();",
+              "    pm.collectionVariables.set('item_id_checked_out', b.item_id);",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "[SETUP for TC-17] Checkout user 3 cart",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/carts/{{cart_id_checked_out}}/checkout", "host": ["{{baseUrl}}"], "path": ["carts", "{{cart_id_checked_out}}", "checkout"] }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('SETUP OK: Status 200, cart is now checked_out', () => {",
+              "    pm.response.to.have.status(200);",
+              "    pm.expect(pm.response.json().status).to.equal('checked_out');",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "TC-17 — Add item to checked-out cart",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/carts/{{cart_id_checked_out}}/items", "host": ["{{baseUrl}}"], "path": ["carts", "{{cart_id_checked_out}}", "items"] },
+            "body": { "mode": "raw", "raw": "{\"variant_id\": 3, \"quantity\": 1}", "options": { "raw": { "language": "json" } } }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 409', () => pm.response.to.have.status(409));",
+              "pm.test('Error CART_CHECKED_OUT', () => {",
+              "    const b = pm.response.json();",
+              "    pm.expect(b.error).to.equal('CART_CHECKED_OUT');",
+              "    pm.expect(b.message).to.equal('Cart already checked out');",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "TC-18 — Quantity exceeds available stock (variant 6, stock=8, request 10)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/carts/{{cart_id_user1}}/items", "host": ["{{baseUrl}}"], "path": ["carts", "{{cart_id_user1}}", "items"] },
+            "body": { "mode": "raw", "raw": "{\"variant_id\": 6, \"quantity\": 10}", "options": { "raw": { "language": "json" } } }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 422', () => pm.response.to.have.status(422));",
+              "pm.test('Error INSUFFICIENT_STOCK', () => {",
+              "    const b = pm.response.json();",
+              "    pm.expect(b.error).to.equal('INSUFFICIENT_STOCK');",
+              "    pm.expect(b.message).to.equal('Requested quantity exceeds available stock');",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "TC-19a — Add variant 5 qty 7 (sets up accumulated exceed)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/carts/{{cart_id_user1}}/items", "host": ["{{baseUrl}}"], "path": ["carts", "{{cart_id_user1}}", "items"] },
+            "body": { "mode": "raw", "raw": "{\"variant_id\": 5, \"quantity\": 7}", "options": { "raw": { "language": "json" } } }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 201 (7 <= stock 10)', () => pm.response.to.have.status(201));",
+              "pm.test('Quantity is 7', () => pm.expect(pm.response.json().quantity).to.equal(7));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "TC-19b — Accumulated quantity exceeds stock (7+5=12 > stock 10)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/carts/{{cart_id_user1}}/items", "host": ["{{baseUrl}}"], "path": ["carts", "{{cart_id_user1}}", "items"] },
+            "body": { "mode": "raw", "raw": "{\"variant_id\": 5, \"quantity\": 5}", "options": { "raw": { "language": "json" } } }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 422', () => pm.response.to.have.status(422));",
+              "pm.test('Error INSUFFICIENT_STOCK (accumulated)', () => {",
+              "    const b = pm.response.json();",
+              "    pm.expect(b.error).to.equal('INSUFFICIENT_STOCK');",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "TC-20 — quantity is zero",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/carts/{{cart_id_user1}}/items", "host": ["{{baseUrl}}"], "path": ["carts", "{{cart_id_user1}}", "items"] },
+            "body": { "mode": "raw", "raw": "{\"variant_id\": 1, \"quantity\": 0}", "options": { "raw": { "language": "json" } } }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 422', () => pm.response.to.have.status(422));",
+              "pm.test('VALIDATION_ERROR on quantity', () => {",
+              "    const b = pm.response.json();",
+              "    pm.expect(b.error).to.equal('VALIDATION_ERROR');",
+              "    pm.expect(b.details[0].field).to.equal('quantity');",
+              "    pm.expect(b.details[0].message).to.equal('Must be greater than 0');",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "TC-21 — quantity is negative",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/carts/{{cart_id_user1}}/items", "host": ["{{baseUrl}}"], "path": ["carts", "{{cart_id_user1}}", "items"] },
+            "body": { "mode": "raw", "raw": "{\"variant_id\": 1, \"quantity\": -3}", "options": { "raw": { "language": "json" } } }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 422', () => pm.response.to.have.status(422));",
+              "pm.test('VALIDATION_ERROR on quantity', () => {",
+              "    const b = pm.response.json();",
+              "    pm.expect(b.error).to.equal('VALIDATION_ERROR');",
+              "    pm.expect(b.details[0].field).to.equal('quantity');",
+              "    pm.expect(b.details[0].message).to.equal('Must be greater than 0');",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "TC-22 — variant_id is zero",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/carts/{{cart_id_user1}}/items", "host": ["{{baseUrl}}"], "path": ["carts", "{{cart_id_user1}}", "items"] },
+            "body": { "mode": "raw", "raw": "{\"variant_id\": 0, \"quantity\": 1}", "options": { "raw": { "language": "json" } } }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 422', () => pm.response.to.have.status(422));",
+              "pm.test('VALIDATION_ERROR on variant_id', () => {",
+              "    const b = pm.response.json();",
+              "    pm.expect(b.error).to.equal('VALIDATION_ERROR');",
+              "    pm.expect(b.details[0].field).to.equal('variant_id');",
+              "    pm.expect(b.details[0].message).to.equal('Must be greater than 0');",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "TC-23 — variant_id is negative",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/carts/{{cart_id_user1}}/items", "host": ["{{baseUrl}}"], "path": ["carts", "{{cart_id_user1}}", "items"] },
+            "body": { "mode": "raw", "raw": "{\"variant_id\": -1, \"quantity\": 1}", "options": { "raw": { "language": "json" } } }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 422', () => pm.response.to.have.status(422));",
+              "pm.test('VALIDATION_ERROR on variant_id', () => {",
+              "    const b = pm.response.json();",
+              "    pm.expect(b.error).to.equal('VALIDATION_ERROR');",
+              "    pm.expect(b.details[0].field).to.equal('variant_id');",
+              "    pm.expect(b.details[0].message).to.equal('Must be greater than 0');",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "TC-24 — variant_id missing from body",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/carts/{{cart_id_user1}}/items", "host": ["{{baseUrl}}"], "path": ["carts", "{{cart_id_user1}}", "items"] },
+            "body": { "mode": "raw", "raw": "{\"quantity\": 2}", "options": { "raw": { "language": "json" } } }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 422', () => pm.response.to.have.status(422));",
+              "pm.test('VALIDATION_ERROR, variant_id required', () => {",
+              "    const b = pm.response.json();",
+              "    pm.expect(b.error).to.equal('VALIDATION_ERROR');",
+              "    pm.expect(b.details[0].field).to.equal('variant_id');",
+              "    pm.expect(b.details[0].message).to.equal('This field is required');",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "TC-25 — quantity missing from body",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/carts/{{cart_id_user1}}/items", "host": ["{{baseUrl}}"], "path": ["carts", "{{cart_id_user1}}", "items"] },
+            "body": { "mode": "raw", "raw": "{\"variant_id\": 1}", "options": { "raw": { "language": "json" } } }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 422', () => pm.response.to.have.status(422));",
+              "pm.test('VALIDATION_ERROR, quantity required', () => {",
+              "    const b = pm.response.json();",
+              "    pm.expect(b.error).to.equal('VALIDATION_ERROR');",
+              "    pm.expect(b.details[0].field).to.equal('quantity');",
+              "    pm.expect(b.details[0].message).to.equal('This field is required');",
+              "});"
+            ]}
+          }]
+        }
+
+      ]
+    },
+
+    {
+      "name": "Group C — Remove Item",
+      "item": [
+
+        {
+          "name": "TC-26 — Remove existing item from cart",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/carts/{{cart_id_user1}}/items/{{item_id_2}}", "host": ["{{baseUrl}}"], "path": ["carts", "{{cart_id_user1}}", "items", "{{item_id_2}}"] }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('Success message', () => {",
+              "    pm.expect(pm.response.json().message).to.equal('Item removed from cart');",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "TC-27 — Remove item from non-existent cart",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/carts/9999/items/1", "host": ["{{baseUrl}}"], "path": ["carts", "9999", "items", "1"] }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 404', () => pm.response.to.have.status(404));",
+              "pm.test('Error CART_NOT_FOUND', () => {",
+              "    pm.expect(pm.response.json().error).to.equal('CART_NOT_FOUND');",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "TC-28 — Remove non-existent item",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/carts/{{cart_id_user1}}/items/9999", "host": ["{{baseUrl}}"], "path": ["carts", "{{cart_id_user1}}", "items", "9999"] }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 404', () => pm.response.to.have.status(404));",
+              "pm.test('Error ITEM_NOT_FOUND', () => {",
+              "    pm.expect(pm.response.json().error).to.equal('ITEM_NOT_FOUND');",
+              "    pm.expect(pm.response.json().message).to.equal('Item not found');",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "TC-29 — Remove item that belongs to a different cart",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/carts/{{cart_id_user2}}/items/{{item_id_1}}", "host": ["{{baseUrl}}"], "path": ["carts", "{{cart_id_user2}}", "items", "{{item_id_1}}"] }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 404', () => pm.response.to.have.status(404));",
+              "pm.test('Error ITEM_NOT_FOUND (item belongs to cart 1, not cart 2)', () => {",
+              "    pm.expect(pm.response.json().error).to.equal('ITEM_NOT_FOUND');",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "TC-30 — Remove item from checked-out cart",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/carts/{{cart_id_checked_out}}/items/{{item_id_checked_out}}", "host": ["{{baseUrl}}"], "path": ["carts", "{{cart_id_checked_out}}", "items", "{{item_id_checked_out}}"] }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 409', () => pm.response.to.have.status(409));",
+              "pm.test('Error CART_CHECKED_OUT', () => {",
+              "    pm.expect(pm.response.json().error).to.equal('CART_CHECKED_OUT');",
+              "    pm.expect(pm.response.json().message).to.equal('Cart already checked out');",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "TC-31 — cart_id zero in path",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/carts/0/items/1", "host": ["{{baseUrl}}"], "path": ["carts", "0", "items", "1"] }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 422', () => pm.response.to.have.status(422));",
+              "pm.test('VALIDATION_ERROR on cart_id', () => {",
+              "    const b = pm.response.json();",
+              "    pm.expect(b.error).to.equal('VALIDATION_ERROR');",
+              "    pm.expect(b.details[0].field).to.equal('cart_id');",
+              "    pm.expect(b.details[0].message).to.equal('Must be greater than 0');",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "TC-32 — item_id zero in path",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/carts/1/items/0", "host": ["{{baseUrl}}"], "path": ["carts", "1", "items", "0"] }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 422', () => pm.response.to.have.status(422));",
+              "pm.test('VALIDATION_ERROR on item_id', () => {",
+              "    const b = pm.response.json();",
+              "    pm.expect(b.error).to.equal('VALIDATION_ERROR');",
+              "    pm.expect(b.details[0].field).to.equal('item_id');",
+              "    pm.expect(b.details[0].message).to.equal('Must be greater than 0');",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "TC-33 — cart_id overflow in path",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/carts/99999999999999999999/items/1", "host": ["{{baseUrl}}"], "path": ["carts", "99999999999999999999", "items", "1"] }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 422', () => pm.response.to.have.status(422));",
+              "pm.test('VALIDATION_ERROR, out of range', () => {",
+              "    const b = pm.response.json();",
+              "    pm.expect(b.error).to.equal('VALIDATION_ERROR');",
+              "    pm.expect(b.details[0].field).to.equal('cart_id');",
+              "    pm.expect(b.details[0].message).to.equal('Value is out of valid range');",
+              "});"
+            ]}
+          }]
+        }
+
+      ]
+    },
+
+    {
+      "name": "Group D — Delete Cart",
+      "item": [
+
+        {
+          "name": "TC-34 — Delete existing active cart (user 2)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/carts/{{cart_id_user2}}", "host": ["{{baseUrl}}"], "path": ["carts", "{{cart_id_user2}}"] }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('Success message', () => {",
+              "    pm.expect(pm.response.json().message).to.equal('Cart deleted successfully');",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "[SETUP for TC-35] Create cart with items for cascade test",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/carts", "host": ["{{baseUrl}}"], "path": ["carts"] },
+            "body": { "mode": "raw", "raw": "{\"user_id\": 2}", "options": { "raw": { "language": "json" } } }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('SETUP OK: Status 201', () => pm.response.to.have.status(201));",
+              "pm.collectionVariables.set('cart_id_to_delete', pm.response.json().cart_id);"
+            ]}
+          }]
+        },
+
+        {
+          "name": "[SETUP for TC-35] Add item to cascade-test cart",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/carts/{{cart_id_to_delete}}/items", "host": ["{{baseUrl}}"], "path": ["carts", "{{cart_id_to_delete}}", "items"] },
+            "body": { "mode": "raw", "raw": "{\"variant_id\": 3, \"quantity\": 2}", "options": { "raw": { "language": "json" } } }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('SETUP OK: Status 201', () => pm.response.to.have.status(201));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "TC-35 — Delete cart with items (CASCADE removes items too)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/carts/{{cart_id_to_delete}}", "host": ["{{baseUrl}}"], "path": ["carts", "{{cart_id_to_delete}}"] }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('Success message (items were cascade-deleted by DB)', () => {",
+              "    pm.expect(pm.response.json().message).to.equal('Cart deleted successfully');",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "TC-36 — Delete non-existent cart",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/carts/9999", "host": ["{{baseUrl}}"], "path": ["carts", "9999"] }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 404', () => pm.response.to.have.status(404));",
+              "pm.test('Error CART_NOT_FOUND', () => {",
+              "    pm.expect(pm.response.json().error).to.equal('CART_NOT_FOUND');",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "TC-37 — cart_id zero",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/carts/0", "host": ["{{baseUrl}}"], "path": ["carts", "0"] }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 422', () => pm.response.to.have.status(422));",
+              "pm.test('VALIDATION_ERROR on cart_id', () => {",
+              "    const b = pm.response.json();",
+              "    pm.expect(b.error).to.equal('VALIDATION_ERROR');",
+              "    pm.expect(b.details[0].field).to.equal('cart_id');",
+              "    pm.expect(b.details[0].message).to.equal('Must be greater than 0');",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "TC-38 — cart_id negative",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/carts/-1", "host": ["{{baseUrl}}"], "path": ["carts", "-1"] }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 422', () => pm.response.to.have.status(422));",
+              "pm.test('VALIDATION_ERROR on cart_id', () => {",
+              "    pm.expect(pm.response.json().error).to.equal('VALIDATION_ERROR');",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "TC-39 — cart_id overflow",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/carts/99999999999999999999", "host": ["{{baseUrl}}"], "path": ["carts", "99999999999999999999"] }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 422', () => pm.response.to.have.status(422));",
+              "pm.test('VALIDATION_ERROR, out of range', () => {",
+              "    const b = pm.response.json();",
+              "    pm.expect(b.error).to.equal('VALIDATION_ERROR');",
+              "    pm.expect(b.details[0].message).to.equal('Value is out of valid range');",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "TC-40 — Delete checked-out cart",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/carts/{{cart_id_checked_out}}", "host": ["{{baseUrl}}"], "path": ["carts", "{{cart_id_checked_out}}"] }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 200 (deletion allowed regardless of status)', () => pm.response.to.have.status(200));",
+              "pm.test('Success message', () => {",
+              "    pm.expect(pm.response.json().message).to.equal('Cart deleted successfully');",
+              "});"
+            ]}
+          }]
+        }
+
+      ]
+    },
+
+    {
+      "name": "Group E — Checkout",
+      "item": [
+
+        {
+          "name": "TC-41 — Checkout active cart with items",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/carts/{{cart_id_user1}}/checkout", "host": ["{{baseUrl}}"], "path": ["carts", "{{cart_id_user1}}", "checkout"] }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('Status is checked_out', () => {",
+              "    const b = pm.response.json();",
+              "    pm.expect(b.status).to.equal('checked_out');",
+              "    pm.expect(b.message).to.equal('Checkout successful');",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "[SETUP for TC-42] Create new cart for user 1 (previous cart just checked out)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/carts", "host": ["{{baseUrl}}"], "path": ["carts"] },
+            "body": { "mode": "raw", "raw": "{\"user_id\": 1}", "options": { "raw": { "language": "json" } } }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('SETUP OK: Status 201', () => pm.response.to.have.status(201));",
+              "pm.collectionVariables.set('cart_id_new_user1', pm.response.json().cart_id);"
+            ]}
+          }]
+        },
+
+        {
+          "name": "TC-42 — Stock reduced after checkout (variant 7 stock=0, add 1 fails)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/carts/{{cart_id_new_user1}}/items", "host": ["{{baseUrl}}"], "path": ["carts", "{{cart_id_new_user1}}", "items"] },
+            "body": { "mode": "raw", "raw": "{\"variant_id\": 7, \"quantity\": 1}", "options": { "raw": { "language": "json" } } }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 422 (proves stock was deducted on checkout)', () => pm.response.to.have.status(422));",
+              "pm.test('Error INSUFFICIENT_STOCK — variant 7 stock is now 0', () => {",
+              "    const b = pm.response.json();",
+              "    pm.expect(b.error).to.equal('INSUFFICIENT_STOCK');",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "TC-43 — Checkout non-existent cart",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/carts/9999/checkout", "host": ["{{baseUrl}}"], "path": ["carts", "9999", "checkout"] }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 404', () => pm.response.to.have.status(404));",
+              "pm.test('Error CART_NOT_FOUND', () => {",
+              "    pm.expect(pm.response.json().error).to.equal('CART_NOT_FOUND');",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "TC-44 — Checkout already checked-out cart",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/carts/{{cart_id_user1}}/checkout", "host": ["{{baseUrl}}"], "path": ["carts", "{{cart_id_user1}}", "checkout"] }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 409', () => pm.response.to.have.status(409));",
+              "pm.test('Error CART_CHECKED_OUT', () => {",
+              "    pm.expect(pm.response.json().error).to.equal('CART_CHECKED_OUT');",
+              "    pm.expect(pm.response.json().message).to.equal('Cart already checked out');",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "[SETUP for TC-45] Create empty cart for user 2",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/carts", "host": ["{{baseUrl}}"], "path": ["carts"] },
+            "body": { "mode": "raw", "raw": "{\"user_id\": 2}", "options": { "raw": { "language": "json" } } }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('SETUP OK: Status 201', () => pm.response.to.have.status(201));",
+              "pm.collectionVariables.set('cart_id_empty', pm.response.json().cart_id);"
+            ]}
+          }]
+        },
+
+        {
+          "name": "TC-45 — Checkout empty cart (no items)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/carts/{{cart_id_empty}}/checkout", "host": ["{{baseUrl}}"], "path": ["carts", "{{cart_id_empty}}", "checkout"] }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 422', () => pm.response.to.have.status(422));",
+              "pm.test('Error CART_EMPTY', () => {",
+              "    pm.expect(pm.response.json().error).to.equal('CART_EMPTY');",
+              "    pm.expect(pm.response.json().message).to.equal('Cart is empty');",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "TC-46 — cart_id zero for checkout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/carts/0/checkout", "host": ["{{baseUrl}}"], "path": ["carts", "0", "checkout"] }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 422', () => pm.response.to.have.status(422));",
+              "pm.test('VALIDATION_ERROR on cart_id', () => {",
+              "    const b = pm.response.json();",
+              "    pm.expect(b.error).to.equal('VALIDATION_ERROR');",
+              "    pm.expect(b.details[0].field).to.equal('cart_id');",
+              "    pm.expect(b.details[0].message).to.equal('Must be greater than 0');",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "TC-47 — cart_id overflow for checkout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/carts/99999999999999999999/checkout", "host": ["{{baseUrl}}"], "path": ["carts", "99999999999999999999", "checkout"] }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 422', () => pm.response.to.have.status(422));",
+              "pm.test('VALIDATION_ERROR, out of range', () => {",
+              "    const b = pm.response.json();",
+              "    pm.expect(b.error).to.equal('VALIDATION_ERROR');",
+              "    pm.expect(b.details[0].message).to.equal('Value is out of valid range');",
+              "});"
+            ]}
+          }]
+        }
+
+      ]
+    },
+
+    {
+      "name": "Group F — Lifecycle",
+      "item": [
+
+        {
+          "name": "TC-48 — Complete Happy Path",
+          "item": [
+
+            {
+              "name": "TC-48 Step 1 — Create cart for user 3",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/carts", "host": ["{{baseUrl}}"], "path": ["carts"] },
+                "body": { "mode": "raw", "raw": "{\"user_id\": 3}", "options": { "raw": { "language": "json" } } }
+              },
+              "event": [{
+                "listen": "test",
+                "script": { "type": "text/javascript", "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('cart_id_lifecycle', pm.response.json().cart_id);"
+                ]}
+              }]
+            },
+
+            {
+              "name": "TC-48 Step 2 — Add first item (variant 1, qty 2)",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/carts/{{cart_id_lifecycle}}/items", "host": ["{{baseUrl}}"], "path": ["carts", "{{cart_id_lifecycle}}", "items"] },
+                "body": { "mode": "raw", "raw": "{\"variant_id\": 1, \"quantity\": 2}", "options": { "raw": { "language": "json" } } }
+              },
+              "event": [{
+                "listen": "test",
+                "script": { "type": "text/javascript", "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));"
+                ]}
+              }]
+            },
+
+            {
+              "name": "TC-48 Step 3 — Add second item (variant 4, qty 1), save item_id",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/carts/{{cart_id_lifecycle}}/items", "host": ["{{baseUrl}}"], "path": ["carts", "{{cart_id_lifecycle}}", "items"] },
+                "body": { "mode": "raw", "raw": "{\"variant_id\": 4, \"quantity\": 1}", "options": { "raw": { "language": "json" } } }
+              },
+              "event": [{
+                "listen": "test",
+                "script": { "type": "text/javascript", "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('item_id_lifecycle', pm.response.json().item_id);"
+                ]}
+              }]
+            },
+
+            {
+              "name": "TC-48 Step 4 — Remove the second item",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": { "raw": "{{baseUrl}}/carts/{{cart_id_lifecycle}}/items/{{item_id_lifecycle}}", "host": ["{{baseUrl}}"], "path": ["carts", "{{cart_id_lifecycle}}", "items", "{{item_id_lifecycle}}"] }
+              },
+              "event": [{
+                "listen": "test",
+                "script": { "type": "text/javascript", "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ]}
+              }]
+            },
+
+            {
+              "name": "TC-48 Step 5 — Re-add variant 4 qty 1",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{baseUrl}}/carts/{{cart_id_lifecycle}}/items", "host": ["{{baseUrl}}"], "path": ["carts", "{{cart_id_lifecycle}}", "items"] },
+                "body": { "mode": "raw", "raw": "{\"variant_id\": 4, \"quantity\": 1}", "options": { "raw": { "language": "json" } } }
+              },
+              "event": [{
+                "listen": "test",
+                "script": { "type": "text/javascript", "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));"
+                ]}
+              }]
+            },
+
+            {
+              "name": "TC-48 Step 6 — Checkout (completes full lifecycle)",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": { "raw": "{{baseUrl}}/carts/{{cart_id_lifecycle}}/checkout", "host": ["{{baseUrl}}"], "path": ["carts", "{{cart_id_lifecycle}}", "checkout"] }
+              },
+              "event": [{
+                "listen": "test",
+                "script": { "type": "text/javascript", "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Full lifecycle completed: status is checked_out', () => {",
+                  "    pm.expect(pm.response.json().status).to.equal('checked_out');",
+                  "    pm.expect(pm.response.json().message).to.equal('Checkout successful');",
+                  "});"
+                ]}
+              }]
+            }
+
+          ]
+        },
+
+        {
+          "name": "TC-49 — User can create new cart after checkout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/carts", "host": ["{{baseUrl}}"], "path": ["carts"] },
+            "body": { "mode": "raw", "raw": "{\"user_id\": 3}", "options": { "raw": { "language": "json" } } }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 201 (user 3 can open new cart after TC-48 checkout)', () => pm.response.to.have.status(201));",
+              "pm.test('New cart created successfully', () => {",
+              "    const b = pm.response.json();",
+              "    pm.expect(b.user_id).to.equal(3);",
+              "    pm.expect(b.message).to.equal('Cart created successfully');",
+              "    pm.collectionVariables.set('cart_id_lifecycle', b.cart_id);",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "TC-50 — Stock enforcement: variant 7 is out of stock after earlier checkout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/carts/{{cart_id_lifecycle}}/items", "host": ["{{baseUrl}}"], "path": ["carts", "{{cart_id_lifecycle}}", "items"] },
+            "body": { "mode": "raw", "raw": "{\"variant_id\": 7, \"quantity\": 1}", "options": { "raw": { "language": "json" } } }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('Status 422', () => pm.response.to.have.status(422));",
+              "pm.test('INSUFFICIENT_STOCK: variant 7 stock=0 after TC-41 deducted all 5 units', () => {",
+              "    const b = pm.response.json();",
+              "    pm.expect(b.error).to.equal('INSUFFICIENT_STOCK');",
+              "    pm.expect(b.message).to.equal('Requested quantity exceeds available stock');",
+              "});"
+            ]}
+          }]
+        }
+
+      ]
+    }
+
+  ]
+}

@@ -433,6 +433,12 @@ Removes all items from a cart.
 
 ---
 
+# Cart API Implementation — Stock Deduction on Checkout
+
+After a user checks out, the stock for every variant in the cart is reduced by the purchased quantity. For example, if variant 1 had stock = 50 and the user bought 10, stock becomes 40 after checkout.
+
+---
+
 # Cart API Implementation
 
 This section explains how the cart API is built, how it works, and what decisions were made during implementation.
@@ -642,3 +648,945 @@ http://127.0.0.1:8000/docs
 4. POST /carts/1/checkout                              → status = checked_out
 5. POST /carts           { "user_id": 1 }              → cart_id = 2 (new active cart)
 ```
+
+---
+
+# API Test Cases
+
+This section contains 50 test cases covering all endpoints, success paths, error paths, edge cases, and validation. Use Swagger UI at `http://127.0.0.1:8000/docs` or any API client like Postman to run them.
+
+## Seeded Test Data (from check_db.py)
+
+| Type | ID | Details |
+|------|----|---------|
+| User | 1 | Asad |
+| User | 2 | Muzammil |
+| User | 3 | Zainab |
+| Variant | 1 | T-Shirt, White, S — stock: 50 |
+| Variant | 2 | T-Shirt, Black, M — stock: 30 |
+| Variant | 3 | T-Shirt, Red, L — stock: 20 |
+| Variant | 4 | Jeans, Blue, 30 — stock: 15 |
+| Variant | 5 | Jeans, Black, 32 — stock: 10 |
+| Variant | 6 | Sneakers, White, 42 — stock: 8 |
+| Variant | 7 | Sneakers, Black, 43 — stock: 5 |
+
+> **Note:** Stock values change as checkout tests run. Reseed the database with `check_db.py` before each test session if you want consistent stock levels. In the test cases below, stock values refer to the freshly seeded state.
+
+---
+
+## Group A — Create Cart (POST /carts)
+
+---
+
+### TC-01 — Create cart for valid user
+
+**Method:** POST `/carts`
+
+**Body:**
+```json
+{ "user_id": 1 }
+```
+
+**Expected status:** `201`
+
+**Expected response:**
+```json
+{ "cart_id": 1, "user_id": 1, "message": "Cart created successfully" }
+```
+
+---
+
+### TC-02 — Create cart for a different valid user
+
+**Method:** POST `/carts`
+
+**Body:**
+```json
+{ "user_id": 2 }
+```
+
+**Expected status:** `201`
+
+**Expected response:**
+```json
+{ "cart_id": 2, "user_id": 2, "message": "Cart created successfully" }
+```
+
+---
+
+### TC-03 — Create cart when user already has an active cart
+
+Run TC-01 first, then call again with the same user.
+
+**Method:** POST `/carts`
+
+**Body:**
+```json
+{ "user_id": 1 }
+```
+
+**Expected status:** `409`
+
+**Expected response:**
+```json
+{ "error": "CART_ALREADY_EXISTS", "message": "Active cart already exists" }
+```
+
+---
+
+### TC-04 — Create cart for non-existent user
+
+**Method:** POST `/carts`
+
+**Body:**
+```json
+{ "user_id": 999 }
+```
+
+**Expected status:** `404`
+
+**Expected response:**
+```json
+{ "error": "USER_NOT_FOUND", "message": "User not found" }
+```
+
+---
+
+### TC-05 — user_id is zero
+
+**Method:** POST `/carts`
+
+**Body:**
+```json
+{ "user_id": 0 }
+```
+
+**Expected status:** `422`
+
+**Expected response:**
+```json
+{ "error": "VALIDATION_ERROR", "details": [{ "field": "user_id", "message": "Must be greater than 0" }] }
+```
+
+---
+
+### TC-06 — user_id is negative
+
+**Method:** POST `/carts`
+
+**Body:**
+```json
+{ "user_id": -5 }
+```
+
+**Expected status:** `422`
+
+**Expected response:**
+```json
+{ "error": "VALIDATION_ERROR", "details": [{ "field": "user_id", "message": "Must be greater than 0" }] }
+```
+
+---
+
+### TC-07 — user_id is a string
+
+**Method:** POST `/carts`
+
+**Body:**
+```json
+{ "user_id": "abc" }
+```
+
+**Expected status:** `422`
+
+**Expected response:**
+```json
+{ "error": "VALIDATION_ERROR", "details": [{ "field": "user_id", "message": "Must be a valid integer" }] }
+```
+
+---
+
+### TC-08 — user_id missing from body
+
+**Method:** POST `/carts`
+
+**Body:**
+```json
+{}
+```
+
+**Expected status:** `422`
+
+**Expected response:**
+```json
+{ "error": "VALIDATION_ERROR", "details": [{ "field": "user_id", "message": "This field is required" }] }
+```
+
+---
+
+### TC-09 — user_id exceeds SQLite integer limit (overflow)
+
+**Method:** POST `/carts`
+
+**Body:**
+```json
+{ "user_id": 99999999999999999999 }
+```
+
+**Expected status:** `422`
+
+**Expected response:**
+```json
+{ "error": "VALIDATION_ERROR", "details": [{ "field": "user_id", "message": "Value is out of valid range" }] }
+```
+
+---
+
+### TC-10 — user_id is a decimal number
+
+**Method:** POST `/carts`
+
+**Body:**
+```json
+{ "user_id": 1.5 }
+```
+
+**Expected status:** `422`
+
+**Expected response:**
+```json
+{ "error": "VALIDATION_ERROR", "details": [{ "field": "user_id", "message": "Must be a valid integer" }] }
+```
+
+---
+
+## Group B — Add Item to Cart (POST /carts/{cart_id}/items)
+
+> **Prerequisite:** Create a cart first using TC-01. Use the returned `cart_id` in the path.
+
+---
+
+### TC-11 — Add a new item to cart
+
+**Method:** POST `/carts/1/items`
+
+**Body:**
+```json
+{ "variant_id": 1, "quantity": 2 }
+```
+
+**Expected status:** `201`
+
+**Expected response:**
+```json
+{ "item_id": 1, "cart_id": 1, "variant_id": 1, "quantity": 2, "message": "Item added to cart" }
+```
+
+---
+
+### TC-12 — Add same variant again (quantity accumulates)
+
+Run TC-11 first, then add the same variant again.
+
+**Method:** POST `/carts/1/items`
+
+**Body:**
+```json
+{ "variant_id": 1, "quantity": 3 }
+```
+
+**Expected status:** `201`
+
+**Expected response:**
+```json
+{ "item_id": 1, "cart_id": 1, "variant_id": 1, "quantity": 5, "message": "Item added to cart" }
+```
+
+> Note: quantity became 2 + 3 = 5, no duplicate row was created.
+
+---
+
+### TC-13 — Add a different variant to the same cart
+
+**Method:** POST `/carts/1/items`
+
+**Body:**
+```json
+{ "variant_id": 4, "quantity": 1 }
+```
+
+**Expected status:** `201`
+
+**Expected response:**
+```json
+{ "item_id": 2, "cart_id": 1, "variant_id": 4, "quantity": 1, "message": "Item added to cart" }
+```
+
+---
+
+### TC-14 — Add quantity exactly equal to available stock
+
+Variant 7 has stock = 5.
+
+**Method:** POST `/carts/1/items`
+
+**Body:**
+```json
+{ "variant_id": 7, "quantity": 5 }
+```
+
+**Expected status:** `201`
+
+**Expected response:**
+```json
+{ "item_id": 3, "cart_id": 1, "variant_id": 7, "quantity": 5, "message": "Item added to cart" }
+```
+
+---
+
+### TC-15 — Add item to non-existent cart
+
+**Method:** POST `/carts/9999/items`
+
+**Body:**
+```json
+{ "variant_id": 1, "quantity": 1 }
+```
+
+**Expected status:** `404`
+
+**Expected response:**
+```json
+{ "error": "CART_NOT_FOUND", "message": "Cart not found" }
+```
+
+---
+
+### TC-16 — Add non-existent variant to cart
+
+**Method:** POST `/carts/1/items`
+
+**Body:**
+```json
+{ "variant_id": 9999, "quantity": 1 }
+```
+
+**Expected status:** `404`
+
+**Expected response:**
+```json
+{ "error": "VARIANT_NOT_FOUND", "message": "Variant not found" }
+```
+
+---
+
+### TC-17 — Add item to a checked-out cart
+
+First checkout the cart using TC-41, then try to add.
+
+**Method:** POST `/carts/1/items`
+
+**Body:**
+```json
+{ "variant_id": 2, "quantity": 1 }
+```
+
+**Expected status:** `409`
+
+**Expected response:**
+```json
+{ "error": "CART_CHECKED_OUT", "message": "Cart already checked out" }
+```
+
+---
+
+### TC-18 — Quantity exceeds available stock
+
+Variant 7 has stock = 5. Requesting 10.
+
+**Method:** POST `/carts/1/items`
+
+**Body:**
+```json
+{ "variant_id": 7, "quantity": 10 }
+```
+
+**Expected status:** `422`
+
+**Expected response:**
+```json
+{ "error": "INSUFFICIENT_STOCK", "message": "Requested quantity exceeds available stock" }
+```
+
+---
+
+### TC-19 — Accumulated quantity exceeds stock
+
+Variant 7 has stock = 5. Add 4, then add 3 more (total = 7 > 5).
+
+**Step 1:** POST `/carts/1/items` with `{ "variant_id": 7, "quantity": 4 }` → 201
+
+**Step 2:** POST `/carts/1/items` with `{ "variant_id": 7, "quantity": 3 }` → should fail
+
+**Expected status (step 2):** `422`
+
+**Expected response:**
+```json
+{ "error": "INSUFFICIENT_STOCK", "message": "Requested quantity exceeds available stock" }
+```
+
+---
+
+### TC-20 — quantity is zero
+
+**Method:** POST `/carts/1/items`
+
+**Body:**
+```json
+{ "variant_id": 1, "quantity": 0 }
+```
+
+**Expected status:** `422`
+
+**Expected response:**
+```json
+{ "error": "VALIDATION_ERROR", "details": [{ "field": "quantity", "message": "Must be greater than 0" }] }
+```
+
+---
+
+### TC-21 — quantity is negative
+
+**Method:** POST `/carts/1/items`
+
+**Body:**
+```json
+{ "variant_id": 1, "quantity": -3 }
+```
+
+**Expected status:** `422`
+
+**Expected response:**
+```json
+{ "error": "VALIDATION_ERROR", "details": [{ "field": "quantity", "message": "Must be greater than 0" }] }
+```
+
+---
+
+### TC-22 — variant_id is zero
+
+**Method:** POST `/carts/1/items`
+
+**Body:**
+```json
+{ "variant_id": 0, "quantity": 1 }
+```
+
+**Expected status:** `422`
+
+**Expected response:**
+```json
+{ "error": "VALIDATION_ERROR", "details": [{ "field": "variant_id", "message": "Must be greater than 0" }] }
+```
+
+---
+
+### TC-23 — variant_id is negative
+
+**Method:** POST `/carts/1/items`
+
+**Body:**
+```json
+{ "variant_id": -1, "quantity": 1 }
+```
+
+**Expected status:** `422`
+
+**Expected response:**
+```json
+{ "error": "VALIDATION_ERROR", "details": [{ "field": "variant_id", "message": "Must be greater than 0" }] }
+```
+
+---
+
+### TC-24 — variant_id missing from body
+
+**Method:** POST `/carts/1/items`
+
+**Body:**
+```json
+{ "quantity": 2 }
+```
+
+**Expected status:** `422`
+
+**Expected response:**
+```json
+{ "error": "VALIDATION_ERROR", "details": [{ "field": "variant_id", "message": "This field is required" }] }
+```
+
+---
+
+### TC-25 — quantity missing from body
+
+**Method:** POST `/carts/1/items`
+
+**Body:**
+```json
+{ "variant_id": 1 }
+```
+
+**Expected status:** `422`
+
+**Expected response:**
+```json
+{ "error": "VALIDATION_ERROR", "details": [{ "field": "quantity", "message": "This field is required" }] }
+```
+
+---
+
+## Group C — Remove Item (DELETE /carts/{cart_id}/items/{item_id})
+
+> **Prerequisite:** Create a cart and add an item. Use the returned `cart_id` and `item_id` in the path.
+
+---
+
+### TC-26 — Remove an existing item from cart
+
+**Method:** DELETE `/carts/1/items/1`
+
+**Expected status:** `200`
+
+**Expected response:**
+```json
+{ "message": "Item removed from cart" }
+```
+
+---
+
+### TC-27 — Remove item from non-existent cart
+
+**Method:** DELETE `/carts/9999/items/1`
+
+**Expected status:** `404`
+
+**Expected response:**
+```json
+{ "error": "CART_NOT_FOUND", "message": "Cart not found" }
+```
+
+---
+
+### TC-28 — Remove non-existent item
+
+**Method:** DELETE `/carts/1/items/9999`
+
+**Expected status:** `404`
+
+**Expected response:**
+```json
+{ "error": "ITEM_NOT_FOUND", "message": "Item not found" }
+```
+
+---
+
+### TC-29 — Remove item that belongs to a different cart
+
+Create two carts (user 1 and user 2), add an item to cart 1. Then try to remove that item using cart 2's ID.
+
+**Method:** DELETE `/carts/2/items/1`
+
+**Expected status:** `404`
+
+**Expected response:**
+```json
+{ "error": "ITEM_NOT_FOUND", "message": "Item not found" }
+```
+
+> This confirms items are checked against the specific cart, not just their own existence.
+
+---
+
+### TC-30 — Remove item from checked-out cart
+
+First checkout the cart, then try to remove an item.
+
+**Method:** DELETE `/carts/1/items/1`
+
+**Expected status:** `409`
+
+**Expected response:**
+```json
+{ "error": "CART_CHECKED_OUT", "message": "Cart already checked out" }
+```
+
+---
+
+### TC-31 — cart_id is zero in path
+
+**Method:** DELETE `/carts/0/items/1`
+
+**Expected status:** `422`
+
+**Expected response:**
+```json
+{ "error": "VALIDATION_ERROR", "details": [{ "field": "cart_id", "message": "Must be greater than 0" }] }
+```
+
+---
+
+### TC-32 — item_id is zero in path
+
+**Method:** DELETE `/carts/1/items/0`
+
+**Expected status:** `422`
+
+**Expected response:**
+```json
+{ "error": "VALIDATION_ERROR", "details": [{ "field": "item_id", "message": "Must be greater than 0" }] }
+```
+
+---
+
+### TC-33 — cart_id overflow in path
+
+**Method:** DELETE `/carts/99999999999999999999/items/1`
+
+**Expected status:** `422`
+
+**Expected response:**
+```json
+{ "error": "VALIDATION_ERROR", "details": [{ "field": "cart_id", "message": "Value is out of valid range" }] }
+```
+
+---
+
+## Group D — Delete Cart (DELETE /carts/{cart_id})
+
+---
+
+### TC-34 — Delete an existing active cart
+
+**Method:** DELETE `/carts/1`
+
+**Expected status:** `200`
+
+**Expected response:**
+```json
+{ "message": "Cart deleted successfully" }
+```
+
+---
+
+### TC-35 — Delete a cart that has items (cascade check)
+
+Create a cart, add multiple items, then delete the cart. All items should be deleted automatically.
+
+**Method:** DELETE `/carts/1`
+
+**Expected status:** `200`
+
+**Expected response:**
+```json
+{ "message": "Cart deleted successfully" }
+```
+
+> Verify by checking `cart_items` in `check_db.py` — no orphan rows should remain.
+
+---
+
+### TC-36 — Delete non-existent cart
+
+**Method:** DELETE `/carts/9999`
+
+**Expected status:** `404`
+
+**Expected response:**
+```json
+{ "error": "CART_NOT_FOUND", "message": "Cart not found" }
+```
+
+---
+
+### TC-37 — cart_id is zero
+
+**Method:** DELETE `/carts/0`
+
+**Expected status:** `422`
+
+**Expected response:**
+```json
+{ "error": "VALIDATION_ERROR", "details": [{ "field": "cart_id", "message": "Must be greater than 0" }] }
+```
+
+---
+
+### TC-38 — cart_id is negative
+
+**Method:** DELETE `/carts/-1`
+
+**Expected status:** `422`
+
+**Expected response:**
+```json
+{ "error": "VALIDATION_ERROR", "details": [{ "field": "cart_id", "message": "Must be greater than 0" }] }
+```
+
+---
+
+### TC-39 — cart_id overflow
+
+**Method:** DELETE `/carts/99999999999999999999`
+
+**Expected status:** `422`
+
+**Expected response:**
+```json
+{ "error": "VALIDATION_ERROR", "details": [{ "field": "cart_id", "message": "Value is out of valid range" }] }
+```
+
+---
+
+### TC-40 — Delete a checked-out cart
+
+First checkout a cart, then delete it. Deletion is allowed regardless of status.
+
+**Method:** DELETE `/carts/1`
+
+**Expected status:** `200`
+
+**Expected response:**
+```json
+{ "message": "Cart deleted successfully" }
+```
+
+---
+
+## Group E — Checkout (POST /carts/{cart_id}/checkout)
+
+---
+
+### TC-41 — Checkout an active cart with items
+
+Create a cart, add at least one item, then checkout.
+
+**Method:** POST `/carts/1/checkout`
+
+**Expected status:** `200`
+
+**Expected response:**
+```json
+{ "cart_id": 1, "status": "checked_out", "message": "Checkout successful" }
+```
+
+---
+
+### TC-42 — Stock is reduced after checkout
+
+**Step 1:** Run `check_db.py` and note stock of variant 1 (e.g., stock = 50).
+
+**Step 2:** Create cart, add 10 units of variant 1, checkout.
+
+**Step 3:** Run `check_db.py` again.
+
+**Expected result:** Stock of variant 1 is now 40.
+
+> This confirms stock deduction works correctly on checkout.
+
+---
+
+### TC-43 — Checkout non-existent cart
+
+**Method:** POST `/carts/9999/checkout`
+
+**Expected status:** `404`
+
+**Expected response:**
+```json
+{ "error": "CART_NOT_FOUND", "message": "Cart not found" }
+```
+
+---
+
+### TC-44 — Checkout an already checked-out cart
+
+First checkout successfully (TC-41), then checkout again.
+
+**Method:** POST `/carts/1/checkout`
+
+**Expected status:** `409`
+
+**Expected response:**
+```json
+{ "error": "CART_CHECKED_OUT", "message": "Cart already checked out" }
+```
+
+---
+
+### TC-45 — Checkout an empty cart (no items)
+
+Create a cart but do not add any items.
+
+**Method:** POST `/carts/1/checkout`
+
+**Expected status:** `422`
+
+**Expected response:**
+```json
+{ "error": "CART_EMPTY", "message": "Cart is empty" }
+```
+
+---
+
+### TC-46 — cart_id is zero
+
+**Method:** POST `/carts/0/checkout`
+
+**Expected status:** `422`
+
+**Expected response:**
+```json
+{ "error": "VALIDATION_ERROR", "details": [{ "field": "cart_id", "message": "Must be greater than 0" }] }
+```
+
+---
+
+### TC-47 — cart_id overflow
+
+**Method:** POST `/carts/99999999999999999999/checkout`
+
+**Expected status:** `422`
+
+**Expected response:**
+```json
+{ "error": "VALIDATION_ERROR", "details": [{ "field": "cart_id", "message": "Value is out of valid range" }] }
+```
+
+---
+
+## Group F — Full Lifecycle & Business Logic Tests
+
+---
+
+### TC-48 — Complete happy path flow
+
+Run these steps in order:
+
+| Step | Request | Expected |
+|------|---------|----------|
+| 1 | POST `/carts` `{ "user_id": 1 }` | 201, cart created |
+| 2 | POST `/carts/1/items` `{ "variant_id": 1, "quantity": 2 }` | 201, item added |
+| 3 | POST `/carts/1/items` `{ "variant_id": 4, "quantity": 1 }` | 201, second item added |
+| 4 | DELETE `/carts/1/items/{item_id}` | 200, item removed |
+| 5 | POST `/carts/1/items` `{ "variant_id": 4, "quantity": 1 }` | 201, item re-added |
+| 6 | POST `/carts/1/checkout` | 200, status = checked_out |
+
+> This is the complete normal user journey from cart creation to checkout.
+
+---
+
+### TC-49 — User can create a new cart after checkout
+
+After completing TC-48, the user should be able to open a new cart.
+
+**Method:** POST `/carts`
+
+**Body:**
+```json
+{ "user_id": 1 }
+```
+
+**Expected status:** `201`
+
+**Expected response:**
+```json
+{ "cart_id": 2, "user_id": 1, "message": "Cart created successfully" }
+```
+
+> A user is only blocked from creating a second cart if their current one is still active. After checkout, they are free to start a new one.
+
+---
+
+### TC-50 — Stock enforcement carries over between sessions
+
+**Step 1:** Note variant 7 has stock = 5.
+
+**Step 2:** Create a cart for user 3, add 5 units of variant 7, checkout.
+- Variant 7 stock is now 0.
+
+**Step 3:** Create a new cart for user 3.
+
+**Step 4:** Try to add 1 unit of variant 7.
+
+**Method:** POST `/carts/{new_cart_id}/items`
+
+**Body:**
+```json
+{ "variant_id": 7, "quantity": 1 }
+```
+
+**Expected status:** `422`
+
+**Expected response:**
+```json
+{ "error": "INSUFFICIENT_STOCK", "message": "Requested quantity exceeds available stock" }
+```
+
+> This confirms the full stock lifecycle: stock is checked on add, deducted on checkout, and enforced on the next purchase attempt.
+
+---
+
+## Test Summary Table
+
+| TC | Endpoint | Scenario | Expected |
+|----|----------|----------|----------|
+| 01 | POST /carts | Valid user | 201 |
+| 02 | POST /carts | Different valid user | 201 |
+| 03 | POST /carts | User already has active cart | 409 |
+| 04 | POST /carts | Non-existent user | 404 |
+| 05 | POST /carts | user_id = 0 | 422 |
+| 06 | POST /carts | user_id negative | 422 |
+| 07 | POST /carts | user_id is string | 422 |
+| 08 | POST /carts | user_id missing | 422 |
+| 09 | POST /carts | user_id overflow | 422 |
+| 10 | POST /carts | user_id decimal | 422 |
+| 11 | POST /carts/{id}/items | New item | 201 |
+| 12 | POST /carts/{id}/items | Same variant again (accumulate) | 201 |
+| 13 | POST /carts/{id}/items | Different variant | 201 |
+| 14 | POST /carts/{id}/items | Quantity exactly equals stock | 201 |
+| 15 | POST /carts/{id}/items | Cart not found | 404 |
+| 16 | POST /carts/{id}/items | Variant not found | 404 |
+| 17 | POST /carts/{id}/items | Cart checked out | 409 |
+| 18 | POST /carts/{id}/items | Quantity exceeds stock | 422 |
+| 19 | POST /carts/{id}/items | Accumulated quantity exceeds stock | 422 |
+| 20 | POST /carts/{id}/items | quantity = 0 | 422 |
+| 21 | POST /carts/{id}/items | quantity negative | 422 |
+| 22 | POST /carts/{id}/items | variant_id = 0 | 422 |
+| 23 | POST /carts/{id}/items | variant_id negative | 422 |
+| 24 | POST /carts/{id}/items | variant_id missing | 422 |
+| 25 | POST /carts/{id}/items | quantity missing | 422 |
+| 26 | DELETE /carts/{id}/items/{id} | Remove existing item | 200 |
+| 27 | DELETE /carts/{id}/items/{id} | Cart not found | 404 |
+| 28 | DELETE /carts/{id}/items/{id} | Item not found | 404 |
+| 29 | DELETE /carts/{id}/items/{id} | Item belongs to different cart | 404 |
+| 30 | DELETE /carts/{id}/items/{id} | Cart checked out | 409 |
+| 31 | DELETE /carts/{id}/items/{id} | cart_id = 0 | 422 |
+| 32 | DELETE /carts/{id}/items/{id} | item_id = 0 | 422 |
+| 33 | DELETE /carts/{id}/items/{id} | cart_id overflow | 422 |
+| 34 | DELETE /carts/{id} | Delete active cart | 200 |
+| 35 | DELETE /carts/{id} | Delete cart with items (cascade) | 200 |
+| 36 | DELETE /carts/{id} | Cart not found | 404 |
+| 37 | DELETE /carts/{id} | cart_id = 0 | 422 |
+| 38 | DELETE /carts/{id} | cart_id negative | 422 |
+| 39 | DELETE /carts/{id} | cart_id overflow | 422 |
+| 40 | DELETE /carts/{id} | Delete checked-out cart | 200 |
+| 41 | POST /carts/{id}/checkout | Active cart with items | 200 |
+| 42 | POST /carts/{id}/checkout | Verify stock reduced after checkout | verify DB |
+| 43 | POST /carts/{id}/checkout | Cart not found | 404 |
+| 44 | POST /carts/{id}/checkout | Cart already checked out | 409 |
+| 45 | POST /carts/{id}/checkout | Empty cart | 422 |
+| 46 | POST /carts/{id}/checkout | cart_id = 0 | 422 |
+| 47 | POST /carts/{id}/checkout | cart_id overflow | 422 |
+| 48 | All endpoints | Complete happy path flow | all pass |
+| 49 | POST /carts | New cart after checkout | 201 |
+| 50 | POST /carts/{id}/items | Stock at 0 after prior checkout | 422 |

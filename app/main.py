@@ -16,6 +16,7 @@ def _friendlyMessage(errType: str, ctx: dict | None) -> str:
         "int_parsing":        "Must be a valid integer",
         "int_type":           "Must be a valid integer",
         "float_type":         "Must be a valid number",
+        "int_from_float":     "Must be a valid integer (no decimal allowed)",
         "string_type":        "Must be text",
         "bool_type":          "Must be true or false",
         "missing":            "This field is required",
