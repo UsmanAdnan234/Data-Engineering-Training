@@ -8,3 +8,23 @@ ignore = ["E501"]
 
 [tool.ruff.lint.per-file-ignores]
 "alembic/*" = ["F401"]
+
+[tool.bandit]
+exclude_dirs = ["tests", "alembic"]
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+warn_unused_ignores = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short"
+
+[tool.coverage.run]
+source = ["app"]
+omit = ["*/tests/*", "*/alembic/*", "seed_db.py", "bulk_insert.py"]
+
+[tool.coverage.report]
+fail_under = 70
+show_missing = true

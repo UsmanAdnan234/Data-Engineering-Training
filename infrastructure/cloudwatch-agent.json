@@ -1,0 +1,103 @@
+{
+  "agent": {
+    "metrics_collection_interval": 60,
+    "run_as_user": "root",
+    "logfile": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log"
+  },
+  "metrics": {
+    "namespace": "CartAPI/EC2",
+    "append_dimensions": {
+      "InstanceId": "${aws:InstanceId}",
+      "InstanceType": "${aws:InstanceType}",
+      "AutoScalingGroupName": "${aws:AutoScalingGroupName}"
+    },
+    "metrics_collected": {
+      "cpu": {
+        "measurement": [
+          "cpu_usage_idle",
+          "cpu_usage_user",
+          "cpu_usage_system",
+          "cpu_usage_iowait"
+        ],
+        "metrics_collection_interval": 60,
+        "totalcpu": true
+      },
+      "mem": {
+        "measurement": [
+          "mem_used_percent",
+          "mem_available_percent",
+          "mem_used",
+          "mem_total"
+        ],
+        "metrics_collection_interval": 60
+      },
+      "disk": {
+        "measurement": [
+          "used_percent",
+          "inodes_free",
+          "read_bytes",
+          "write_bytes"
+        ],
+        "metrics_collection_interval": 60,
+        "resources": ["/"]
+      },
+      "diskio": {
+        "measurement": [
+          "reads",
+          "writes",
+          "read_bytes",
+          "write_bytes",
+          "read_time",
+          "write_time"
+        ],
+        "metrics_collection_interval": 60,
+        "resources": ["*"]
+      },
+      "net": {
+        "measurement": [
+          "bytes_recv",
+          "bytes_sent",
+          "packets_recv",
+          "packets_sent",
+          "err_in",
+          "err_out"
+        ],
+        "metrics_collection_interval": 60,
+        "resources": ["*"]
+      },
+      "processes": {
+        "measurement": [
+          "running",
+          "sleeping",
+          "dead",
+          "total"
+        ],
+        "metrics_collection_interval": 60
+      }
+    }
+  },
+  "logs": {
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "/home/ec2-user/app/logs/app.log",
+            "log_group_name": "/cart-api/application",
+            "log_stream_name": "{instance_id}/app",
+            "timezone": "UTC",
+            "timestamp_format": "%Y-%m-%dT%H:%M:%S",
+            "multi_line_start_pattern": "\\{"
+          },
+          {
+            "file_path": "/opt/aws/amazon-cloudwatch-agent/logs/amazon-cloudwatch-agent.log",
+            "log_group_name": "/cart-api/cloudwatch-agent",
+            "log_stream_name": "{instance_id}/agent",
+            "timezone": "UTC"
+          }
+        ]
+      }
+    },
+    "log_stream_name": "{instance_id}/default",
+    "force_flush_interval": 15
+  }
+}
