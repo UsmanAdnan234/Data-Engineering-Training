@@ -1,0 +1,480 @@
+================================================================================
+  RESEARCH & IMPLEMENTATION PLAN
+  Project: Cart API — Data Engineering Training
+  Date: 2026-06-08
+================================================================================
+
+
+════════════════════════════════════════════════════════════════════════════════
+  SECTION 1 — STATUS OF ORIGINAL 9 PHASES
+════════════════════════════════════════════════════════════════════════════════
+
+Phase 1  — Testing (50+ test cases)          ✅ DONE
+  - 50 test cases in postman/collections/cart_api_tests.postman_collection.json
+  - Covers all 5 endpoints, positive + negative, validation, edge cases
+
+Phase 2  — Postman Collection                ✅ DONE
+  - Full collection with 6 groups (A-F), SETUP requests, variable chaining
+
+Phase 3  — Newman Automation                 ✅ DONE
+  - Newman integrated in GitHub Actions CI step
+  - Runs all 50 tests automatically on every push
+
+Phase 4  — Logs on Cloud                     ✅ DONE
+  - Structured logger using Python logging (app/core/logger.py)
+  - All endpoints log request received, success, and errors
+  - Visible in Render Dashboard → Logs tab
+
+Phase 5  — Dockerize                         ✅ DONE
+  - Dockerfile: builds Python 3.12 image, runs alembic + uvicorn
+  - docker-compose.yml: local dev with db + api services
+
+Phase 6  — CI/CD Pipeline                    ✅ DONE
+  - GitHub Actions: lint → migrate → seed → Newman tests → blue-green deploy
+  - Blue-green workflow written (needs 4 GitHub secrets to activate)
+
+Phase 7  — Database Migration Scripts        ✅ DONE
+  - Alembic configured and integrated in CI
+  - alembic/versions/001_initial_schema.py creates all 5 tables
+
+Phase 8  — Code Quality Checks               ✅ DONE
+  - Ruff linter: E (PEP8) + F (Pyflakes) + I (isort) rules
+  - Runs as first CI step — blocks merge if quality fails
+
+Phase 9  — Deployment                        ✅ DONE
+  - Deployed on Render (Python runtime, PostgreSQL free tier)
+  - Live at: https://cart-api-ubyq.onrender.com
+
+
+════════════════════════════════════════════════════════════════════════════════
+  SECTION 2 — TODAY'S NEW TASKS (RESEARCH)
+════════════════════════════════════════════════════════════════════════════════
+
+──────────────────────────────────────────────────────────────────────────────
+TASK 1: UNIT TESTING (needed before SonarQube)
+──────────────────────────────────────────────────────────────────────────────
+STATUS: ❌ NOT DONE — no test files exist in the project
+
+What it is:
+  Testing individual functions/classes in isolation (not the full API).
+  Unlike Postman which tests the HTTP layer, unit tests test the logic layer.
+
+What to test:
+  - app/services/cart_service.py  ← business logic (most important)
+  - app/repositories/cart_repository.py ← SQL queries (use DB or mock)
+  - app/schemas/cart.py ← Pydantic validation
+
+Tools:
+  - pytest          — test runner (industry standard for Python)
+  - pytest-cov      — measures how much of your code the tests cover
+  - unittest.mock   — mock the database so tests run without a real DB
+
+Target coverage: 80%+ (SonarQube will flag if below threshold)
+
+Files to create:
+  tests/
+  ├── __init__.py
+  ├── test_cart_service.py      ← unit tests for service layer
+  ├── test_cart_repository.py  ← unit tests for repository layer
+  └── conftest.py              ← shared fixtures (mock DB connection)
+
+Example test:
+  def test_create_cart_user_not_found():
+      mock_repo = Mock()
+      mock_repo.getUser.return_value = None
+      service = CartService(mock_repo)
+      with pytest.raises(UserNotFoundException):
+          service.createCart(999)
+
+Add to requirements.txt:
+  pytest==8.3.2
+  pytest-cov==5.0.0
+
+Add to CI (after ruff check):
+  - name: Run unit tests with coverage
+    run: pytest tests/ --cov=app --cov-report=xml --cov-report=term
+
+
+──────────────────────────────────────────────────────────────────────────────
+TASK 2: SONARQUBE / SONARCLOUD (static code analysis + quality gate)
+──────────────────────────────────────────────────────────────────────────────
+STATUS: ❌ NOT DONE
+
+What it is:
+  SonarQube is an industry-standard tool that scans your code and reports:
+  - Bugs (logic errors)
+  - Vulnerabilities (security issues)
+  - Code smells (bad patterns)
+  - Code coverage (% of code tested)
+  - Duplications (copy-pasted code)
+  - Technical debt (how long to fix everything)
+
+SonarQube vs SonarCloud:
+  SonarQube  = self-hosted server (complex to set up, not free on server)
+  SonarCloud = cloud-hosted SonarQube (FREE for open-source repos) ← USE THIS
+
+How to set up SonarCloud (free):
+  1. Go to sonarcloud.io → Sign in with GitHub
+  2. Import your repo: UsmanAdnan234/Data-Engineering-Training
+  3. Get SONAR_TOKEN from SonarCloud project settings
+  4. Add SONAR_TOKEN as GitHub secret
+  5. Add sonar-project.properties file to repo root
+  6. Add SonarCloud scan step to GitHub Actions
+
+sonar-project.properties file:
+  sonar.projectKey=UsmanAdnan234_Data-Engineering-Training
+  sonar.organization=usmanadnan234
+  sonar.sources=app
+  sonar.tests=tests
+  sonar.python.coverage.reportPaths=coverage.xml
+  sonar.python.version=3.12
+
+GitHub Actions step to add:
+  - name: SonarCloud Scan
+    uses: SonarSource/sonarcloud-github-action@master
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+What you get:
+  - Quality Gate: PASS/FAIL badge on every PR
+  - Dashboard showing all issues
+  - Coverage report linked to SonarCloud
+
+
+──────────────────────────────────────────────────────────────────────────────
+TASK 3: STATIC CODE ANALYSIS — ADDITIONAL TOOLS
+──────────────────────────────────────────────────────────────────────────────
+STATUS: ✅ Ruff done  |  ❌ Bandit and MyPy not done
+
+Ruff (already in CI):
+  - Checks code style and common errors
+  - Fast, covers PEP8, unused imports, etc.
+
+Bandit (security analysis) — FREE:
+  - Scans for security vulnerabilities in Python code
+  - Finds: hardcoded passwords, SQL injection risks, insecure functions
+  - pip install bandit
+  - Run: bandit -r app/
+  - Add to CI: bandit -r app/ -ll  (only report medium/high severity)
+
+MyPy (type checking) — FREE:
+  - Checks that function argument types match what is passed
+  - Example: if addItem() expects int but you pass str, MyPy catches it
+  - pip install mypy
+  - Run: mypy app/
+  - Needs type annotations (already partially there with Pydantic)
+
+Add to requirements.txt:
+  bandit==1.8.0
+  mypy==1.11.2
+
+Add to CI:
+  - name: Security scan (Bandit)
+    run: bandit -r app/ -ll
+  - name: Type check (MyPy)
+    run: mypy app/ --ignore-missing-imports
+
+
+──────────────────────────────────────────────────────────────────────────────
+TASK 4: CANARY DEPLOYMENT
+──────────────────────────────────────────────────────────────────────────────
+STATUS: ❌ NOT DONE (concept only, needs AWS for real implementation)
+
+What it is:
+  Instead of switching ALL traffic at once (blue-green),
+  canary sends a SMALL % of traffic to new version first.
+
+  Example:
+    90% users → old version (stable)
+    10% users → new version (canary)
+  If no errors after X minutes → gradually increase to 100%
+  If errors detected → roll back the 10% instantly
+
+Blue-Green vs Canary:
+  Blue-Green:  instant switch, all-or-nothing
+  Canary:      gradual shift, much safer for large scale
+
+Render vs AWS:
+  Render free tier:  ❌ Cannot do canary (no traffic splitting)
+  AWS with ALB:      ✅ Can do canary with weighted target groups
+  AWS Lambda:        ✅ Native canary via CodeDeploy
+  Kubernetes:        ✅ Best for canary (Argo Rollouts, Flagger)
+
+For this project (learning):
+  Option A — Simulate canary on Render:
+    - Use a feature flag environment variable (CANARY=true/false)
+    - New features behind the flag, only enabled for % of users
+    - Not real traffic splitting but teaches the concept
+
+  Option B — Move to AWS EC2 + ALB:
+    - Create two EC2 instances (stable + canary)
+    - ALB weighted routing: 90% → stable, 10% → canary
+    - Real industry implementation
+    - See Section 3 for EC2 setup details
+
+
+──────────────────────────────────────────────────────────────────────────────
+TASK 5: OBSERVABILITY — CLOUDWATCH ALTERNATIVE
+──────────────────────────────────────────────────────────────────────────────
+STATUS: ❌ NOT DONE (only basic Render logs right now)
+
+What is observability:
+  Three pillars:
+  1. Logs    — what happened (already have with logger)
+  2. Metrics — numbers over time (requests/sec, latency, error rate)
+  3. Traces  — how long each step took inside a request
+
+AWS CloudWatch:
+  - Free tier: 5GB logs/month, 10 metrics, 3 dashboards
+  - Best for EC2 deployments
+  - Requires AWS account and boto3 setup
+  - Overkill if staying on Render
+
+Free alternatives (better for Render):
+  1. Grafana Cloud (RECOMMENDED for free tier)
+     - Free: 50GB logs, 10k metrics, 14-day retention
+     - Works with any platform
+     - Beautiful dashboards
+     - Setup: add grafana loki handler to Python logger
+     - pip install python-logging-loki
+
+  2. Better Stack (Logtail) — FREE 1GB/month
+     - Easiest to set up (just change log handler)
+     - Real-time log search
+     - pip install logtail-python
+
+  3. Datadog — FREE 5GB/day logs, 1-day retention
+     - Industry standard but free tier is limited
+
+  4. New Relic — FREE 100GB/month
+     - Very generous free tier
+     - APM (Application Performance Monitoring)
+     - pip install newrelic
+
+RECOMMENDATION for this project:
+  Stay on Render → Use Better Stack (easiest, free, good enough)
+  Move to EC2 → Use AWS CloudWatch (native integration)
+
+Implementation with Better Stack:
+  1. Sign up at logs.betterstack.com
+  2. Get source token
+  3. Add to app/core/logger.py:
+     from logtail import LogtailHandler
+     handler = LogtailHandler(source_token="YOUR_TOKEN")
+     logger.addHandler(handler)
+  4. Add LOGTAIL_TOKEN to .env and Render environment variables
+
+
+──────────────────────────────────────────────────────────────────────────────
+TASK 6: BLUE-GREEN — IF NOT RENDER THEN AWS EC2
+──────────────────────────────────────────────────────────────────────────────
+STATUS: ✅ Workflow written  |  ❌ Needs secrets or EC2 setup
+
+Current state:
+  - ci.yml has complete blue-green logic
+  - Skips gracefully if secrets not set
+  - Need: either set 4 Render secrets OR move to EC2
+
+Real Blue-Green on AWS EC2 (step by step):
+  1. Launch 2 EC2 instances (t2.micro — free tier)
+     - cart-api-blue  (currently running)
+     - cart-api-green (standby)
+
+  2. Create Application Load Balancer (ALB)
+     - Target Group Blue  → cart-api-blue  EC2
+     - Target Group Green → cart-api-green EC2
+     - Default: 100% traffic to Blue
+
+  3. GitHub Actions deploy step:
+     a. SSH into Green EC2, pull latest code, restart service
+     b. Health check Green via ALB
+     c. If healthy: update ALB to send 100% traffic to Green
+     d. If fail: ALB stays on Blue (automatic rollback)
+
+  4. Free tier costs: $0/month (t2.micro is free 12 months)
+     After 12 months: ~$8-10/month per instance
+
+Tools for EC2 deployment:
+  - AWS CLI (aws configure)
+  - GitHub Secrets: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+  - GitHub Actions: aws-actions/configure-aws-credentials@v4
+
+
+──────────────────────────────────────────────────────────────────────────────
+TASK 7: MILLIONS OF RECORDS BULK INSERT SCRIPT
+──────────────────────────────────────────────────────────────────────────────
+STATUS: ❌ NOT DONE
+
+What it is:
+  A script that inserts large amounts of realistic fake data into
+  the database to test performance under load.
+
+Why it matters:
+  - Tests how the API handles large datasets
+  - Reveals slow queries that need indexes
+  - Simulates real production data volume
+
+Tools:
+  - Faker library — generates realistic fake names, emails, etc.
+  - psycopg2 execute_values — bulk insert (much faster than one row at a time)
+  - PostgreSQL COPY command — fastest possible insert (10x faster than execute_values)
+
+Target: insert 1 million product_variants, 100k users, 500k carts
+
+File to create: bulk_insert.py
+
+Performance comparison:
+  Method                    | 1M rows time
+  --------------------------|-------------
+  INSERT one by one         | ~30 minutes
+  execute_values (batches)  | ~2-3 minutes
+  COPY from CSV             | ~15-30 seconds  ← use this
+
+Add to requirements.txt:
+  faker==26.0.0
+
+
+════════════════════════════════════════════════════════════════════════════════
+  SECTION 3 — RENDER vs AWS EC2 RECOMMENDATION
+════════════════════════════════════════════════════════════════════════════════
+
+RENDER (current):
+  Pros:
+    + Free tier (no credit card risk)
+    + Zero DevOps knowledge needed
+    + Auto-deploy from GitHub
+    + Built-in PostgreSQL
+    + Good enough for internship portfolio
+  Cons:
+    - Spins down after 15 min inactivity (50s cold start)
+    - Cannot do real canary deployment
+    - No traffic splitting / load balancer
+    - Limited control over infrastructure
+    - Cannot install custom system packages
+
+AWS EC2 (alternative):
+  Pros:
+    + Real industry experience (every company uses AWS)
+    + Full control over infrastructure
+    + Real blue-green + canary with ALB
+    + CloudWatch native integration
+    + t2.micro free for 12 months
+    + Can run Docker, custom ports, background jobs
+  Cons:
+    - More complex setup (SSH, security groups, IAM)
+    - Risk of accidental charges if not careful
+    - Needs Linux knowledge (Ubuntu commands)
+    - No auto-deploy out of box (need to configure manually)
+
+VERDICT:
+  For internship presentation:  Use BOTH
+    → Keep Render as primary (already working)
+    → Set up EC2 separately to demo real blue-green + canary
+    → Shows you know both worlds
+
+  If CTO asks to move entirely: GO TO EC2
+    → More impressive for a Data Engineering internship
+    → AWS is industry standard
+
+
+════════════════════════════════════════════════════════════════════════════════
+  SECTION 4 — COMPLETE IMPLEMENTATION ORDER (TODAY)
+════════════════════════════════════════════════════════════════════════════════
+
+Priority order based on dependencies:
+
+STEP 1 — Unit Tests with pytest          (2-3 hours)
+  Why first: SonarQube needs coverage report, everything else builds on tests
+  Files: tests/__init__.py, tests/conftest.py, tests/test_cart_service.py
+  Commands: pytest tests/ --cov=app --cov-report=xml
+
+STEP 2 — SonarCloud integration          (30 minutes)
+  Why: needs coverage.xml from Step 1
+  Files: sonar-project.properties
+  Actions: sign up sonarcloud.io, add SONAR_TOKEN secret, add CI step
+
+STEP 3 — Bandit + MyPy in CI             (30 minutes)
+  Why: quick win, adds to code quality story
+  Files: update requirements.txt, update ci.yml
+
+STEP 4 — Bulk insert script              (1-2 hours)
+  Why: standalone, no dependencies
+  Files: bulk_insert.py
+  Commands: python bulk_insert.py --users 100000 --variants 1000000
+
+STEP 5 — Observability (Better Stack)    (1 hour)
+  Why: shows monitoring knowledge
+  Files: update app/core/logger.py
+  Actions: sign up logs.betterstack.com, add LOGTAIL_TOKEN
+
+STEP 6 — Blue-Green secrets OR EC2       (1-2 hours)
+  Option A: add 4 GitHub secrets → blue-green activates immediately
+  Option B: set up EC2 with ALB for real blue-green + canary
+
+STEP 7 — Canary concept demo             (1 hour)
+  Files: update ci.yml with canary job (weighted deploy)
+
+
+════════════════════════════════════════════════════════════════════════════════
+  SECTION 5 — TOOLS SUMMARY TABLE
+════════════════════════════════════════════════════════════════════════════════
+
+Category            | Tool            | Free?  | Status
+--------------------|-----------------|--------|------------------
+Linting             | Ruff            | ✅ Yes | ✅ Done
+Security scan       | Bandit          | ✅ Yes | ❌ To implement
+Type checking       | MyPy            | ✅ Yes | ❌ To implement
+Code quality gate   | SonarCloud      | ✅ Yes | ❌ To implement
+Unit testing        | pytest          | ✅ Yes | ❌ To implement
+Coverage            | pytest-cov      | ✅ Yes | ❌ To implement
+Fake data           | Faker           | ✅ Yes | ❌ To implement
+Observability/logs  | Better Stack    | ✅ Yes | ❌ To implement
+Observability/logs  | AWS CloudWatch  | ✅ 5GB | ❌ If using EC2
+CI/CD               | GitHub Actions  | ✅ Yes | ✅ Done
+Migration           | Alembic         | ✅ Yes | ✅ Done
+Deployment          | Render          | ✅ Yes | ✅ Done
+Deployment (alt)    | AWS EC2         | ✅ 12mo| ❌ Optional
+Blue-Green          | Render (2 svcs) | ✅ Yes | ⚠️  Needs secrets
+Blue-Green (real)   | AWS ALB + EC2   | ✅ Yes | ❌ Optional
+Canary              | AWS ALB weights | ✅ Yes | ❌ After EC2
+Container           | Docker          | ✅ Yes | ✅ Done
+API testing         | Newman          | ✅ Yes | ✅ Done
+
+
+════════════════════════════════════════════════════════════════════════════════
+  SECTION 6 — COMPLETE CI/CD PIPELINE (TARGET STATE)
+════════════════════════════════════════════════════════════════════════════════
+
+git push to main
+      │
+      ▼
+GitHub Actions
+      │
+      ├── CI Job
+      │     ├── pip install
+      │     ├── ruff check       (linting)
+      │     ├── bandit -r app/   (security)
+      │     ├── mypy app/        (types)
+      │     ├── alembic upgrade  (migrations)
+      │     ├── python seed_db   (test data)
+      │     ├── pytest --cov     (unit tests)
+      │     ├── uvicorn &        (start server)
+      │     └── newman run       (API tests)
+      │
+      ├── SonarCloud Job (after CI)
+      │     └── sonarcloud-github-action
+      │           ├── bug analysis
+      │           ├── vulnerability scan
+      │           └── coverage gate
+      │
+      └── CD Job (after CI, main branch only)
+            ├── identify active slot (blue/green)
+            ├── deploy to inactive slot
+            ├── wait for health check
+            ├── smoke test
+            └── promote to active (blue-green switch)
+
+================================================================================
+  END OF RESEARCH DOCUMENT
+================================================================================

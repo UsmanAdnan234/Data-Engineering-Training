@@ -1,0 +1,77 @@
+version: "3.8"
+
+# Local SonarQube Community Edition — for running analysis without SonarCloud.
+#
+# Usage:
+#   docker-compose -f sonarqube/docker-compose.sonar.yml up -d
+#   Wait 2-3 minutes for startup, then open http://localhost:9000
+#   Default login: admin / admin (change on first login)
+#
+# Run analysis against local SonarQube:
+#   pip install pysonar-scanner    # or use sonar-scanner CLI
+#   sonar-scanner \
+#     -Dsonar.host.url=http://localhost:9000 \
+#     -Dsonar.login=<your-token>
+#
+# IMPORTANT: vm.max_map_count must be >= 524288 on Linux host:
+#   sudo sysctl -w vm.max_map_count=524288
+#   echo "vm.max_map_count=524288" | sudo tee -a /etc/sysctl.conf
+
+services:
+
+  sonarqube:
+    image: sonarqube:10.6-community
+    container_name: sonarqube
+    depends_on:
+      sonar-db:
+        condition: service_healthy
+    environment:
+      SONAR_JDBC_URL: jdbc:postgresql://sonar-db:5432/sonar
+      SONAR_JDBC_USERNAME: sonar
+      SONAR_JDBC_PASSWORD: sonar
+      SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: "true"
+    volumes:
+      - sonar_data:/opt/sonarqube/data
+      - sonar_extensions:/opt/sonarqube/extensions
+      - sonar_logs:/opt/sonarqube/logs
+    ports:
+      - "9000:9000"
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9000/api/system/status | grep -q UP || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
+    networks:
+      - sonar-network
+
+  sonar-db:
+    image: postgres:16-alpine
+    container_name: sonar-db
+    environment:
+      POSTGRES_DB: sonar
+      POSTGRES_USER: sonar
+      POSTGRES_PASSWORD: sonar
+    volumes:
+      - sonar_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sonar"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sonar-network
+
+volumes:
+  sonar_data:
+  sonar_extensions:
+  sonar_logs:
+  sonar_db_data:
+
+networks:
+  sonar-network:
+    driver: bridge

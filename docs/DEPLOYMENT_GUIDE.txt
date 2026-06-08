@@ -1,0 +1,986 @@
+================================================================================
+  DEPLOYMENT GUIDE — Cart API Production Setup on AWS EC2
+  Senior DevOps Reference | Data Engineering Internship Project
+  Last Updated: June 2026
+================================================================================
+
+This guide covers every part of the production-grade AWS deployment for the
+Cart API. Read it top to bottom the first time. Use it as a reference later.
+
+TABLE OF CONTENTS
+─────────────────
+  Part 01 — Architecture Overview
+  Part 02 — What We Built (Project Summary)
+  Part 03 — Dockerization (Multi-Stage Build)
+  Part 04 — AWS Infrastructure Setup
+  Part 05 — EC2 Server Preparation
+  Part 06 — RDS PostgreSQL Setup
+  Part 07 — Application Load Balancer (ALB)
+  Part 08 — CI Pipeline (GitHub Actions)
+  Part 09 — Static Analysis (Ruff, Bandit, Safety, MyPy)
+  Part 10 — Unit Tests and Coverage
+  Part 11 — Blue-Green Deployment
+  Part 12 — Canary Deployment
+  Part 13 — Observability (CloudWatch + Structured Logging)
+  Part 14 — Bulk Data Insert (Millions of Records)
+  Part 15 — Rollback Strategy
+  Part 16 — Security Checklist
+  Part 17 — SonarQube (Local) and SonarCloud
+  Part 18 — Secrets Reference (GitHub Actions)
+  Part 19 — Common Commands Quick Reference
+
+
+================================================================================
+PART 01 — ARCHITECTURE OVERVIEW
+================================================================================
+
+WHY THIS ARCHITECTURE:
+Traditional single-server deployments go down during updates. With blue-green
+deployment + ALB, users never see downtime. CloudWatch ensures you catch errors
+before users complain. RDS managed PostgreSQL means no manual backups or patching.
+
+ARCHITECTURE DIAGRAM:
+
+  GitHub Push
+       │
+       ▼
+  GitHub Actions CI ──► Docker Image ──► DockerHub Registry
+       │                    │
+       │ (on success)       │
+       ▼                    │
+  GitHub Actions CD ◄───────┘
+       │
+       │  SSH
+       ▼
+  ┌─────────────────────────────────────────────┐
+  │              AWS (us-east-1)                │
+  │                                             │
+  │   Internet                                  │
+  │      │                                      │
+  │      ▼                                      │
+  │  [ ALB — Application Load Balancer ]        │
+  │      │                                      │
+  │   ┌──┴──────────────────┐                   │
+  │   │  Weighted Routing   │                   │
+  │   └──┬──────────────────┘                   │
+  │      │                                      │
+  │   ┌──▼────────┐  ┌──────────────┐           │
+  │   │ EC2 Blue  │  │ EC2 Green    │           │
+  │   │ (active)  │  │ (inactive/   │           │
+  │   │ cart-api  │  │  standby)    │           │
+  │   │ Docker    │  │ Docker       │           │
+  │   └──────┬────┘  └──────┬───────┘           │
+  │          │              │                    │
+  │          └──────┬───────┘                   │
+  │                 ▼                           │
+  │         [ RDS PostgreSQL ]                  │
+  │           (Multi-AZ)                        │
+  │                                             │
+  │   [ CloudWatch ]  ◄── Logs + Metrics        │
+  └─────────────────────────────────────────────┘
+
+KEY NUMBERS:
+  - Deployment time:      ~3 minutes (zero user downtime)
+  - Health check timeout: 3 minutes (12 retries × 15s)
+  - Rollback time:        ~30 seconds (one AWS API call)
+  - CloudWatch log delay: <15 seconds (force_flush_interval)
+
+
+================================================================================
+PART 02 — WHAT WE BUILT (PROJECT SUMMARY)
+================================================================================
+
+The Cart API is a FastAPI application that manages e-commerce shopping carts.
+It was built in phases:
+
+PHASE 1 — Core API
+  - POST /carts          Create a new cart for a user
+  - POST /carts/{id}/items   Add item to cart
+  - DELETE /carts/{id}/items/{item_id}  Remove item
+  - DELETE /carts/{id}   Delete cart
+  - POST /carts/{id}/checkout  Checkout and reduce stock
+
+PHASE 2 — Hardening
+  - Input validation: user_id must be int, gt=0, le=SQLITE_INT_MAX
+  - Error codes: USER_NOT_FOUND, CART_NOT_FOUND, VALIDATION_ERROR, etc.
+  - psycopg2 ThreadedConnectionPool (not SQLAlchemy ORM — raw SQL)
+  - Alembic migrations for schema version control
+
+PHASE 3 — Quality + Observability
+  - 50 Postman test cases (run via Newman in CI)
+  - 22 unit tests with pytest + mock (service layer isolation)
+  - JSON structured logging with correlation IDs
+  - Ruff, Bandit, Safety, MyPy static analysis
+
+PHASE 4 — Production Deploy
+  - Docker multi-stage build (non-root user, healthcheck)
+  - Blue-green deployment on AWS EC2 + ALB
+  - Canary deployment (10% → 50% → 100% traffic shift)
+  - CloudWatch for metrics and log aggregation
+  - Rollback script (ALB traffic, DB migration, or both)
+  - Bulk insert for 1M+ records performance testing
+
+
+================================================================================
+PART 03 — DOCKERIZATION (MULTI-STAGE BUILD)
+================================================================================
+
+WHY MULTI-STAGE:
+Single-stage builds include all build tools (compilers, pip cache, dev headers)
+in the final image. Multi-stage copies only the installed packages, keeping the
+image small and reducing attack surface.
+
+HOW IT WORKS:
+  Stage 1 (deps): Install system libraries (libpq-dev for psycopg2) and pip packages
+  Stage 2 (production): Copy from deps, add app code, create non-root user
+
+KEY DECISIONS:
+  - Non-root user (appuser, uid 1000): Limits blast radius if container is compromised
+  - HEALTHCHECK: Docker and ALB both use this to know when the container is ready
+  - uvicorn --workers 2: 2 worker processes per EC2 instance (tune for instance size)
+  - CMD runs alembic upgrade head first: Ensures DB schema is always current on startup
+
+BUILD COMMANDS:
+  # Build locally
+  docker build -t cart-api:dev .
+
+  # Test it locally (needs DATABASE_URL in env)
+  docker run -p 8000:8000 -e DATABASE_URL=postgresql://... cart-api:dev
+
+  # Push to DockerHub (CI does this automatically)
+  docker tag cart-api:dev yourusername/cart-api:v1.0.0
+  docker push yourusername/cart-api:v1.0.0
+
+FILE: Dockerfile (2-stage, in project root)
+FILE: .dockerignore (prevents .env and secrets from entering image)
+FILE: docker-compose.prod.yml (used on EC2 servers)
+
+
+================================================================================
+PART 04 — AWS INFRASTRUCTURE SETUP
+================================================================================
+
+WHY AWS EC2 OVER RENDER:
+  - Render free tier: no traffic splitting, limited CPU, shared resources
+  - AWS EC2: full control, real ALB, actual blue-green, CloudWatch integration
+  - Render is good for quick demos; EC2 is for real production
+
+WHAT YOU NEED TO CREATE IN AWS (one time setup):
+
+4.1 IAM USER FOR GITHUB ACTIONS
+  - Go to IAM → Users → Create User
+  - Name: github-actions-deploy
+  - Attach policies:
+      AmazonEC2FullAccess        (for describing + SSH)
+      ElasticLoadBalancingFullAccess  (for modify-listener)
+      CloudWatchAgentServerPolicy
+  - Create Access Keys → save as GitHub secrets
+
+4.2 SECURITY GROUPS
+  Create two security groups:
+
+  sg-alb (for the Load Balancer):
+    Inbound:  HTTP 80 from 0.0.0.0/0, HTTPS 443 from 0.0.0.0/0
+    Outbound: All traffic
+
+  sg-ec2 (for EC2 instances):
+    Inbound:  Port 8000 from sg-alb ONLY (not public internet)
+              Port 22 (SSH) from your office/GitHub IP range
+    Outbound: All traffic
+
+  sg-rds (for RDS):
+    Inbound:  Port 5432 from sg-ec2 ONLY
+    Outbound: All traffic
+
+4.3 VPC AND SUBNETS
+  - Use default VPC for simplicity
+  - Create 2 subnets in different AZs (required for ALB):
+      subnet-blue:  us-east-1a
+      subnet-green: us-east-1b
+
+COMMANDS (run from your machine with AWS CLI configured):
+  # Verify your identity
+  aws sts get-caller-identity
+
+  # List your VPCs
+  aws ec2 describe-vpcs --query 'Vpcs[*].{ID:VpcId,CIDR:CidrBlock}'
+
+
+================================================================================
+PART 05 — EC2 SERVER PREPARATION
+================================================================================
+
+WHY TWO SERVERS:
+Blue-green deployment requires two identical servers. At any time, one is live
+and one is standby (ready to receive the next deployment).
+
+LAUNCH TWO EC2 INSTANCES:
+  - AMI:           Amazon Linux 2023 (free tier eligible)
+  - Instance type: t3.small (2 vCPU, 2GB RAM — minimum for Docker + Python)
+  - Key pair:      Create new → download .pem file → save as GitHub secret
+  - Security group: sg-ec2 (created above)
+  - Name them:     cart-api-blue and cart-api-green
+
+INSTALL DOCKER ON EACH EC2 (run after SSH into the server):
+  # Connect to blue server
+  ssh -i yourkey.pem ec2-user@<EC2_BLUE_HOST>
+
+  # Install Docker
+  sudo dnf update -y
+  sudo dnf install docker -y
+  sudo systemctl start docker
+  sudo systemctl enable docker
+  sudo usermod -aG docker ec2-user
+
+  # Install Docker Compose
+  sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" \
+    -o /usr/local/bin/docker-compose
+  sudo chmod +x /usr/local/bin/docker-compose
+
+  # Install AWS CLI (for CloudWatch Agent)
+  sudo dnf install awscli -y
+
+  # Create app directory
+  mkdir -p /home/ec2-user/app/logs
+  cd /home/ec2-user/app
+
+  # Copy docker-compose.prod.yml to the server
+  # (easiest way: paste contents via nano, or use scp)
+
+  # Repeat ALL OF THE ABOVE on the green server
+
+INSTALL CLOUDWATCH AGENT ON EACH EC2:
+  sudo dnf install amazon-cloudwatch-agent -y
+
+  # Copy cloudwatch-agent.json to /opt/aws/amazon-cloudwatch-agent/etc/
+  sudo cp cloudwatch-agent.json /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
+
+  # Start the agent
+  sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
+    -a fetch-config \
+    -m ec2 \
+    -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json \
+    -s
+
+  # Check status
+  sudo systemctl status amazon-cloudwatch-agent
+
+VERIFY DOCKER IS RUNNING:
+  docker ps       # should show no errors
+  docker-compose --version
+
+FILE: infrastructure/cloudwatch-agent.json (CloudWatch config)
+
+
+================================================================================
+PART 06 — RDS POSTGRESQL SETUP
+================================================================================
+
+WHY RDS INSTEAD OF POSTGRESQL ON EC2:
+  - Automated daily backups retained for 7 days
+  - Multi-AZ failover (automatic failover in ~60 seconds)
+  - One-click minor version upgrades
+  - No SSH access needed — reduces attack surface
+  - Performance Insights for query analysis
+
+CREATE RDS INSTANCE:
+  - Engine:      PostgreSQL 16
+  - Template:    Free tier (for dev) or Production (for real use)
+  - DB name:     cart_db
+  - Username:    postgres
+  - Password:    (save in GitHub secret as DATABASE_URL)
+  - Instance:    db.t3.micro (free tier) or db.t3.small (production)
+  - Storage:     20 GB gp3, autoscaling enabled
+  - VPC:         Same VPC as EC2
+  - Security:    sg-rds (only accepts connections from sg-ec2)
+  - Multi-AZ:    Yes (production) / No (dev/free tier)
+
+GET THE CONNECTION STRING:
+  - Go to RDS → Databases → your-db → Connectivity & security
+  - Copy the Endpoint (e.g. cart-db.abc123.us-east-1.rds.amazonaws.com)
+  - Format: postgresql://postgres:<password>@<endpoint>:5432/cart_db
+
+RUN INITIAL MIGRATIONS (from your local machine or from EC2):
+  export DATABASE_URL="postgresql://postgres:<password>@<endpoint>:5432/cart_db"
+  alembic upgrade head
+  python seed_db.py
+
+
+================================================================================
+PART 07 — APPLICATION LOAD BALANCER (ALB)
+================================================================================
+
+WHY ALB:
+ALB distributes traffic across multiple targets and supports weighted routing,
+which is what makes blue-green and canary deployments possible. Without ALB,
+switching deployments means DNS changes (slow, cached) or server restarts (downtime).
+
+CREATE ALB:
+  1. Go to EC2 → Load Balancers → Create Load Balancer → Application Load Balancer
+  2. Name: cart-api-alb
+  3. Scheme: Internet-facing
+  4. Subnets: subnet-blue (us-east-1a) + subnet-green (us-east-1b)
+  5. Security group: sg-alb
+
+CREATE TARGET GROUPS:
+  Target Group 1:
+    Name:     cart-api-blue
+    Protocol: HTTP
+    Port:     8000
+    VPC:      same VPC
+    Health check path: /docs
+    Register: cart-api-blue EC2 instance
+
+  Target Group 2:
+    Name:     cart-api-green
+    Protocol: HTTP
+    Port:     8000
+    VPC:      same VPC
+    Health check path: /docs
+    Register: cart-api-green EC2 instance
+
+CREATE LISTENER:
+  Protocol: HTTP, Port: 80
+  Default action: Forward to blue TG (100%), green TG (0%)
+
+GET ARNS (needed for GitHub secrets):
+  # ALB Listener ARN
+  aws elbv2 describe-listeners \
+    --load-balancer-arn <your-alb-arn> \
+    --query 'Listeners[*].ListenerArn'
+
+  # Target Group ARNs
+  aws elbv2 describe-target-groups \
+    --names cart-api-blue cart-api-green \
+    --query 'TargetGroups[*].{Name:TargetGroupName,ARN:TargetGroupArn}'
+
+MANUALLY CHECK WHICH SLOT IS ACTIVE:
+  aws elbv2 describe-listeners \
+    --listener-arns <ALB_LISTENER_ARN> \
+    --query 'Listeners[0].DefaultActions[0].ForwardConfig.TargetGroups'
+
+
+================================================================================
+PART 08 — CI PIPELINE (GITHUB ACTIONS)
+================================================================================
+
+WHY CI (CONTINUOUS INTEGRATION):
+Every code push is automatically tested. If tests fail, the code is not deployed.
+This catches bugs before they reach production.
+
+FILE: .github/workflows/ci.yml
+
+PIPELINE JOBS (run in order):
+  Job 1: quality   — Ruff, Bandit, Safety, MyPy
+  Job 2: test      — Unit tests + coverage, then Postman integration tests
+  Job 3: sonar     — SonarCloud analysis (only if SONAR_TOKEN secret is set)
+  Job 4: docker    — Build and push Docker image (only on push to main)
+
+TRIGGERS:
+  - push to main or changedDB branch
+  - pull_request targeting main
+  - manual trigger (workflow_dispatch)
+
+HOW TO TRIGGER MANUALLY:
+  GitHub → Actions → CI — Quality Gates → Run workflow → Run workflow
+
+READING CI RESULTS:
+  - Green checkmark: all jobs passed
+  - Red X: click the failed job → find the failed step → read the log
+  - Yellow warning: non-blocking issue (e.g., Safety found a CVE but won't fail CI)
+
+EXAMPLE: What happens on git push to changedDB:
+  1. GitHub detects the push
+  2. Spins up Ubuntu runner
+  3. Installs Python 3.12 + all dependencies
+  4. Runs ruff check (fails if import order wrong or syntax error)
+  5. Runs bandit (security scan — fails on HIGH severity)
+  6. Runs pytest (fails if any test fails or coverage < 70%)
+  7. Starts FastAPI server in background
+  8. Runs all 50 Postman tests via Newman
+  9. (If push to main) Builds Docker image and pushes to DockerHub
+  10. CI complete — CD workflow can now deploy
+
+
+================================================================================
+PART 09 — STATIC ANALYSIS (RUFF, BANDIT, SAFETY, MYPY)
+================================================================================
+
+WHY STATIC ANALYSIS:
+Catches bugs and security issues WITHOUT running the code. Ruff finds style
+issues in milliseconds. Bandit finds dangerous Python patterns. Safety finds
+known CVEs in your dependencies before they become a breach.
+
+RUFF (Linter + Import Sorter):
+  Purpose: Enforce code style, detect obvious bugs, sort imports
+  Config:  pyproject.toml [tool.ruff]
+  Rules:   E (pycodestyle), F (pyflakes), I (isort)
+  Run:     ruff check .
+  Fix:     ruff check . --fix
+
+  Common failures:
+    I001 — imports not sorted alphabetically
+    E711 — comparison to None using == instead of is
+    F401 — unused import
+
+BANDIT (Security Scanner):
+  Purpose: Find dangerous Python patterns (subprocess injection, hardcoded passwords, etc.)
+  Config:  pyproject.toml [tool.bandit]
+  Run:     bandit -r app/ -ll
+  Report:  bandit -r app/ -f json -o bandit-report.json
+
+  Common findings:
+    B105 — hardcoded_password_string
+    B601 — paramiko_calls (SSH)
+    B310 — urllib_urlopen
+
+SAFETY (Dependency CVE Scanner):
+  Purpose: Check requirements.txt against known vulnerability database
+  Run:     safety check --full-report
+  Note:    Uses free safety DB (public CVEs). Some CVEs may be in paid-only DB.
+
+MYPY (Type Checker):
+  Purpose: Catch type errors before runtime (e.g., passing str where int expected)
+  Config:  pyproject.toml [tool.mypy]
+  Run:     mypy app/ --ignore-missing-imports
+  Note:    Currently set to continue-on-error (informational, not blocking CI)
+
+RUN ALL LOCALLY BEFORE PUSHING:
+  ruff check .
+  bandit -r app/ -ll
+  safety check
+  mypy app/ --ignore-missing-imports
+
+
+================================================================================
+PART 10 — UNIT TESTS AND COVERAGE
+================================================================================
+
+WHY UNIT TESTS SEPARATE FROM POSTMAN TESTS:
+  - Postman tests = integration tests (test the full HTTP stack, need a running server + DB)
+  - Unit tests = isolated (test one function at a time, mock the database)
+  - Unit tests are 100x faster and catch logic bugs early
+
+TEST STRUCTURE:
+  tests/
+    __init__.py           Empty (makes tests/ a Python package)
+    conftest.py           Shared fixtures (mock_repo, cart_service)
+    test_cart_service.py  22 unit tests across 5 test classes
+
+TEST CLASSES:
+  TestCreateCart   (5 tests)  — valid creation, duplicate cart, user not found
+  TestAddItem      (9 tests)  — valid add, insufficient stock, item already exists, etc.
+  TestRemoveItem   (5 tests)  — valid remove, item not found, cart not found
+  TestDeleteCart   (3 tests)  — valid delete, not found, already checked out
+  TestCheckout     (6 tests)  — valid checkout, empty cart, already checked out
+
+HOW MOCKING WORKS:
+  The service layer (CartService) takes a repository object as a dependency.
+  In tests, we replace the real repository with a MagicMock.
+  This means tests don't need a database — they run instantly.
+
+  Example:
+    mock_repo.getUser.return_value = {"user_id": 1, "name": "Asad"}
+    # When CartService calls self.repo.getUser(1), it gets {"user_id": 1, ...}
+    # No database needed.
+
+RUN TESTS:
+  pytest tests/ -v
+  pytest tests/ --cov=app --cov-report=term-missing
+  pytest tests/ --cov=app --cov-report=xml:coverage.xml   # for SonarCloud
+
+COVERAGE THRESHOLD: 70% (set in pyproject.toml [tool.coverage.report])
+  If coverage drops below 70%, CI fails.
+
+FILE: tests/conftest.py
+FILE: tests/test_cart_service.py
+
+
+================================================================================
+PART 11 — BLUE-GREEN DEPLOYMENT
+================================================================================
+
+WHY BLUE-GREEN:
+Normal deployments restart the server → users see downtime (502 errors).
+Blue-green keeps the old version running while the new version starts.
+The switch is an AWS API call — users see zero downtime.
+
+HOW IT WORKS STEP BY STEP:
+  1. BEFORE deploy:  ALB → 100% Blue (old version)
+  2. Deploy starts:  New image pushed to Docker Hub
+  3. Inactive found: Green is inactive, deploy new image there
+  4. Health check:   Wait for Green to respond with HTTP 200 (up to 3 minutes)
+  5. Smoke test:     Send a real request to Green, verify correct response
+  6. ALB switch:     Modify ALB listener → 100% Green, 0% Blue
+  7. AFTER deploy:   ALB → 100% Green (new version), Blue is standby
+  8. Next deploy:    Repeats but swaps — Green is active, Blue gets the new image
+
+WHAT HAPPENS IF SOMETHING GOES WRONG:
+  - If health check fails: Blue stays active, Green never receives traffic
+  - If smoke test fails:   Same — Blue stays active
+  - Manual rollback:       scripts/rollback.sh --mode alb (30 seconds)
+
+SCRIPT: scripts/deploy-blue-green.sh
+  Usage: ./scripts/deploy-blue-green.sh --image-tag v1.2.3
+  Required env vars: EC2_BLUE_HOST, EC2_GREEN_HOST, EC2_USER, SSH_KEY_PATH,
+                     ALB_LISTENER_ARN, TG_BLUE_ARN, TG_GREEN_ARN, AWS_REGION,
+                     DOCKER_IMAGE, DATABASE_URL
+
+  The script:
+    1. Queries ALB to find which TG has >= 50% weight (= active slot)
+    2. SSHs into the inactive EC2 and runs docker-compose up --force-recreate
+    3. Runs 12 health check retries (15s each = 3 minutes max)
+    4. Calls health_check.sh for smoke test
+    5. Calls aws elbv2 modify-listener to flip traffic
+
+GITHUB ACTIONS CD: .github/workflows/cd.yml
+  Trigger: workflow_dispatch (manual) or workflow_call (from CI)
+  Inputs:  image_tag, deploy_mode (blue-green or canary), canary_weight
+
+
+================================================================================
+PART 12 — CANARY DEPLOYMENT
+================================================================================
+
+WHY CANARY:
+Blue-green is binary — you switch all traffic at once. Canary is gradual.
+You send 10% of users to the new version, monitor for errors, then increase.
+If the new version has a bug, only 10% of users are affected, not everyone.
+
+HOW CANARY WORKS:
+  Step 1: ./scripts/deploy-canary.sh --image-tag v1.2.3 --weight 10
+    → 90% Blue (stable), 10% Green (canary)
+    → Monitor CloudWatch for 15-30 minutes
+
+  Step 2: ./scripts/deploy-canary.sh --image-tag v1.2.3 --weight 50
+    → 50% Blue, 50% Green
+    → Monitor for another 15-30 minutes
+
+  Step 3: ./scripts/deploy-canary.sh --image-tag v1.2.3 --weight 100
+    → 0% Blue, 100% Green
+    → Full promotion complete
+
+AUTOMATIC ROLLBACK ON ERROR:
+  The script uses: trap rollback ERR
+  If any command fails (health check, ALB API call), it automatically runs
+  the rollback function which sets Blue back to 100%.
+
+SCRIPT: scripts/deploy-canary.sh
+  Always deploys to Green (the canary slot).
+  Blue is always the stable reference.
+
+GITHUB ACTIONS:
+  In cd.yml, set deploy_mode=canary and canary_weight=10 when running workflow_dispatch.
+  This triggers the canary path in the CD workflow.
+
+MONITORING WHAT TO WATCH:
+  - CloudWatch → Metrics → CartAPI/EC2 → CPU, Memory
+  - CloudWatch → Log Groups → /cart-api/application → filter for "ERROR"
+  - ALB → Target Groups → Health → verify green targets are healthy
+
+
+================================================================================
+PART 13 — OBSERVABILITY (CLOUDWATCH + STRUCTURED LOGGING)
+================================================================================
+
+WHY STRUCTURED LOGGING:
+Plain text logs: "Error processing request"  → useless for debugging
+JSON logs:       {"timestamp":"2026-06-08T10:30:00Z","level":"ERROR","message":"Error processing request","correlation_id":"abc-123","user_id":42}
+              → searchable, filterable, alertable in CloudWatch
+
+HOW THE LOGGER WORKS:
+  FILE: app/core/logger.py
+
+  Every request gets a correlation_id (UUID4). This is attached to every log
+  line during that request. So when debugging, you filter by correlation_id
+  to see every log line from a single request — even across multiple services.
+
+  Log fields:
+    timestamp      — UTC ISO 8601
+    level          — DEBUG, INFO, WARNING, ERROR
+    logger         — Python logger name (e.g. app.services.cart)
+    module         — Python file name
+    function       — Function that logged the message
+    line           — Line number
+    message        — The log message
+    correlation_id — Per-request UUID
+    trace_id       — Optional AWS X-Ray trace ID
+    exception      — Stack trace (only on errors)
+
+  Two handlers:
+    StreamHandler → stdout → Docker captures this → CloudWatch Agent ships it
+    FileHandler   → logs/app.log → CloudWatch Agent reads this file
+
+HOW CLOUDWATCH AGENT SHIPS LOGS:
+  FILE: infrastructure/cloudwatch-agent.json
+
+  The agent reads logs/app.log and ships to CloudWatch Logs:
+    Log Group:  /cart-api/application
+    Log Stream: {instance_id}/app
+
+  It also collects metrics every 60 seconds:
+    Namespace: CartAPI/EC2
+    Metrics:   CPU, Memory, Disk, Network, Processes
+
+SEARCHING LOGS IN CLOUDWATCH:
+  CloudWatch → Log Groups → /cart-api/application → Search log group
+
+  Example queries (CloudWatch Log Insights):
+    # Find all errors in last 1 hour
+    fields @timestamp, level, message, correlation_id
+    | filter level = "ERROR"
+    | sort @timestamp desc
+    | limit 50
+
+    # Find all logs for one request
+    fields @timestamp, level, message
+    | filter correlation_id = "abc-123-..."
+    | sort @timestamp asc
+
+    # Count errors per minute
+    filter level = "ERROR"
+    | stats count() by bin(1m)
+
+CLOUDWATCH ALARMS (set these up in AWS console):
+  - High CPU: > 80% for 5 minutes → alert
+  - High Error Rate: > 10 errors/minute → alert
+  - Low Healthy Hosts: < 1 healthy host in TG → alert (urgent)
+
+
+================================================================================
+PART 14 — BULK DATA INSERT (MILLIONS OF RECORDS)
+================================================================================
+
+WHY BULK INSERT:
+  - Verify the API handles large datasets without OOM or timeout
+  - Test database query performance with realistic data volumes
+  - Benchmark your EC2 + RDS configuration
+
+FILE: scripts/bulk_insert.py
+
+HOW IT WORKS:
+  1. Uses Faker library to generate realistic fake data
+  2. Uses psycopg2.extras.execute_values for batch inserts
+     (execute_values sends ONE SQL statement with N rows, not N separate statements)
+  3. Reports rows/second and total time
+
+execute_values vs. individual inserts:
+  Individual:     INSERT INTO users VALUES (...)   × 1,000,000 = 1M round trips
+  execute_values: INSERT INTO users VALUES (...),(...),... in batches of 10,000
+                  = 100 round trips — 50-100x faster
+
+USAGE:
+  # Insert 1 million users
+  python scripts/bulk_insert.py --table users --count 1000000
+
+  # Insert 5 million variants (products must exist first)
+  python scripts/bulk_insert.py --table products --count 10000
+  python scripts/bulk_insert.py --table variants --count 5000000
+
+  # Insert everything (users + products + variants) — 500k each
+  python scripts/bulk_insert.py --table all --count 500000
+
+  # Custom batch size (increase for faster inserts, decrease if memory is tight)
+  python scripts/bulk_insert.py --table users --count 1000000 --batch-size 50000
+
+  # Use specific database URL
+  python scripts/bulk_insert.py --table users --count 100000 \
+    --db-url postgresql://postgres:password@rds-endpoint:5432/cart_db
+
+EXPECTED PERFORMANCE ON t3.small + RDS:
+  - Users: ~50,000 - 100,000 rows/second
+  - Variants: ~40,000 - 80,000 rows/second
+  - 1 million rows: ~10-25 seconds
+
+AFTER BULK INSERT:
+  - Run VACUUM ANALYZE in PostgreSQL to update statistics
+  - Check query plans with EXPLAIN ANALYZE
+  - Test your API endpoints with the large dataset
+
+  SQL to check row counts:
+    SELECT
+      (SELECT COUNT(*) FROM users) AS users,
+      (SELECT COUNT(*) FROM products) AS products,
+      (SELECT COUNT(*) FROM product_variants) AS variants,
+      (SELECT COUNT(*) FROM carts) AS carts,
+      (SELECT COUNT(*) FROM cart_items) AS items;
+
+CLEANUP (reset to seed data):
+  python seed_db.py
+  (Runs TRUNCATE ... RESTART IDENTITY CASCADE then re-inserts 5 users, 5 products, 13 variants)
+
+
+================================================================================
+PART 15 — ROLLBACK STRATEGY
+================================================================================
+
+WHY ROLLBACK:
+Deployments fail. Database migrations go wrong. New code has a critical bug.
+Rollback must be fast (< 1 minute for traffic), safe (no data loss), and
+confirmed (no accidental rollbacks).
+
+FILE: scripts/rollback.sh
+
+THREE MODES:
+
+Mode 1: ALB rollback (traffic only — does NOT touch the database)
+  Purpose: Send all traffic back to the stable slot
+  Time:    ~30 seconds
+  When:    New deployment has a bug but database is fine
+  Command: ./scripts/rollback.sh --mode alb \
+             --alb-listener-arn <ARN> \
+             --stable-tg-arn <BLUE_TG_ARN>
+  What it does: aws elbv2 modify-listener → 100% to stable TG
+
+Mode 2: DB rollback (migration only — does NOT change ALB traffic)
+  Purpose: Undo the most recent Alembic migration
+  Time:    Depends on migration complexity (seconds to minutes)
+  When:    Migration caused errors, traffic already rolled back via mode 1
+  Command: ./scripts/rollback.sh --mode db \
+             --db-url postgresql://...
+  What it does: alembic downgrade -1
+  IMPORTANT: This rolls back exactly ONE migration. Run multiple times to go further back.
+
+Mode 3: Full rollback (ALB + DB together)
+  Purpose: Complete rollback of both traffic and schema
+  When:    Major failure — new version AND its migration are both broken
+  Command: ./scripts/rollback.sh --mode full \
+             --alb-listener-arn <ARN> \
+             --stable-tg-arn <BLUE_TG_ARN> \
+             --canary-tg-arn <GREEN_TG_ARN> \
+             --db-url postgresql://...
+
+SAFETY FEATURES:
+  - Requires typing "yes" to confirm before any destructive action
+  - Shows exactly what it will do before doing it
+  - Exits immediately if any command fails (set -euo pipefail)
+
+ROLLBACK DECISION TREE:
+  Bug reported in production?
+    → Check if it's a code bug or data/schema bug
+    → Code bug only: use mode alb (30 seconds, no data risk)
+    → Schema bug: use mode full (but plan carefully — downgrade can lose data!)
+    → Not sure: use mode alb first (safe), investigate, then decide on mode db
+
+VERIFY ROLLBACK WORKED:
+  # Check ALB target weights
+  aws elbv2 describe-listeners \
+    --listener-arns <ALB_LISTENER_ARN> \
+    --query 'Listeners[0].DefaultActions[0].ForwardConfig.TargetGroups'
+
+  # Check current Alembic version
+  alembic current
+  alembic history --verbose
+
+
+================================================================================
+PART 16 — SECURITY CHECKLIST
+================================================================================
+
+SECRETS MANAGEMENT:
+  [x] .env is in .gitignore — never committed to git
+  [x] .dockerignore excludes .env — never in Docker image
+  [x] All secrets in GitHub Actions Secrets, not in workflow YAML
+  [x] DATABASE_URL not hardcoded anywhere in application code
+  [x] SSH key stored as GitHub secret (EC2_SSH_PRIVATE_KEY)
+
+NETWORK SECURITY:
+  [x] EC2 instances not directly accessible from internet (only via ALB)
+  [x] RDS only accessible from EC2 security group (not public)
+  [x] ALB security group: only 80/443 from internet
+  [x] EC2 security group: only 8000 from ALB, SSH from known IPs
+
+CONTAINER SECURITY:
+  [x] Non-root user in Docker container (appuser, uid 1000)
+  [x] No secrets in Dockerfile or docker-compose files
+  [x] Health check configured (ALB removes unhealthy containers)
+
+APPLICATION SECURITY:
+  [x] Input validation on all endpoints (Pydantic Field validators)
+  [x] SQL injection prevention (psycopg2 parameterized queries, never f-strings)
+  [x] No hardcoded credentials anywhere in Python code
+  [x] Bandit scan in CI pipeline
+
+DEPENDENCY SECURITY:
+  [x] Safety check in CI (scans requirements.txt for CVEs)
+  [x] Pinned dependency versions in requirements.txt (not ranges)
+
+WHAT TO DO WHEN SAFETY FINDS A CVE:
+  1. Check the CVE severity (Critical/High = fix now, Medium/Low = schedule)
+  2. pip install <package>==<new-version>  (check if newer version fixes it)
+  3. Update requirements.txt, run tests, deploy
+
+
+================================================================================
+PART 17 — SONARQUBE (LOCAL) AND SONARCLOUD
+================================================================================
+
+WHY SONAR:
+SonarQube gives you a dashboard showing: code coverage, duplications, security
+hotspots, code smells, and bugs — all in one place. SonarCloud is the cloud
+version (free for open source). Local SonarQube is for private/offline analysis.
+
+SONARCLOUD (recommended — free for open source):
+  1. Go to sonarcloud.io → Sign in with GitHub
+  2. Create organization (your GitHub username)
+  3. Add project → select your repo
+  4. Go to project Settings → Generate token
+  5. Add token as GitHub secret SONAR_TOKEN
+  6. SonarCloud runs automatically in CI when SONAR_TOKEN is set
+
+  Config file: sonar-project.properties (project root)
+    sonar.projectKey=your-org_cart-api
+    sonar.organization=your-org
+    sonar.sources=app
+    sonar.tests=tests
+    sonar.python.coverage.reportPaths=coverage.xml
+
+LOCAL SONARQUBE (no account needed):
+  FILE: sonarqube/docker-compose.sonar.yml
+
+  # Start SonarQube (takes 2-3 minutes)
+  docker-compose -f sonarqube/docker-compose.sonar.yml up -d
+
+  # Wait until healthy
+  docker-compose -f sonarqube/docker-compose.sonar.yml ps
+
+  # Open http://localhost:9000
+  # Login: admin / admin → change password on first login
+  # Create project → "From local analysis" → generate token
+
+  # Run analysis (from project root)
+  # Option A: sonar-scanner CLI
+  brew install sonar-scanner   # macOS
+  sonar-scanner \
+    -Dsonar.host.url=http://localhost:9000 \
+    -Dsonar.login=<your-local-token> \
+    -Dsonar.projectKey=cart-api
+
+  # Option B: Docker scanner
+  docker run --rm --network host \
+    -v "$PWD:/usr/src" \
+    sonarsource/sonar-scanner-cli \
+    -Dsonar.host.url=http://localhost:9000 \
+    -Dsonar.login=<your-local-token>
+
+  # Stop SonarQube
+  docker-compose -f sonarqube/docker-compose.sonar.yml down
+
+  NOTE: SonarQube requires vm.max_map_count >= 524288 on Linux:
+    sudo sysctl -w vm.max_map_count=524288
+
+
+================================================================================
+PART 18 — SECRETS REFERENCE (GITHUB ACTIONS)
+================================================================================
+
+Add these in: GitHub → Your Repo → Settings → Secrets and variables → Actions
+
+REQUIRED FOR CI (unit tests + Postman):
+  (no secrets needed — uses postgres service container)
+
+REQUIRED FOR DOCKER BUILD/PUSH (Job 4 in ci.yml):
+  DOCKERHUB_USERNAME    Your DockerHub username (e.g. johndoe)
+  DOCKERHUB_TOKEN       DockerHub access token (Settings → Security → New Access Token)
+
+REQUIRED FOR CD BLUE-GREEN DEPLOY (cd.yml):
+  EC2_BLUE_HOST         Public IP of blue EC2  (e.g. 54.123.45.67)
+  EC2_GREEN_HOST        Public IP of green EC2 (e.g. 54.123.45.68)
+  EC2_USER              SSH user: ec2-user (Amazon Linux) or ubuntu (Ubuntu)
+  EC2_SSH_PRIVATE_KEY   Contents of .pem file (paste entire file including headers)
+  ALB_LISTENER_ARN      arn:aws:elasticloadbalancing:us-east-1:123456:listener/...
+  TG_BLUE_ARN           arn:aws:elasticloadbalancing:us-east-1:123456:targetgroup/cart-api-blue/...
+  TG_GREEN_ARN          arn:aws:elasticloadbalancing:us-east-1:123456:targetgroup/cart-api-green/...
+  AWS_ACCESS_KEY_ID     AKIAIOSFODNN7EXAMPLE
+  AWS_SECRET_ACCESS_KEY wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+  AWS_REGION            us-east-1
+  DATABASE_URL          postgresql://postgres:password@rds-endpoint:5432/cart_db
+
+OPTIONAL (enables SonarCloud analysis):
+  SONAR_TOKEN           Token from sonarcloud.io project settings
+
+HOW TO ADD A SECRET:
+  1. GitHub → Repo → Settings → Secrets and variables → Actions
+  2. Click "New repository secret"
+  3. Name: EC2_BLUE_HOST  (exact name, case sensitive)
+  4. Value: 54.123.45.67
+  5. Click "Add secret"
+
+VERIFY SECRETS ARE SET:
+  GitHub → Actions → Run any workflow → look at the "Check secrets" step output
+
+
+================================================================================
+PART 19 — COMMON COMMANDS QUICK REFERENCE
+================================================================================
+
+DOCKER:
+  docker build -t cart-api:dev .                    # Build image
+  docker run -p 8000:8000 -e DATABASE_URL=... cart-api:dev   # Run locally
+  docker ps                                          # List running containers
+  docker logs cart-api --tail 50                     # Last 50 log lines
+  docker-compose -f docker-compose.prod.yml up -d   # Start production compose
+  docker-compose -f docker-compose.prod.yml down    # Stop
+
+DATABASE:
+  alembic upgrade head           # Apply all pending migrations
+  alembic downgrade -1           # Rollback one migration
+  alembic current                # Show current migration version
+  alembic history --verbose      # Show all migrations
+  python seed_db.py              # Reset to clean seed data
+
+BULK INSERT:
+  python scripts/bulk_insert.py --table users --count 1000000
+  python scripts/bulk_insert.py --table all   --count 100000
+
+TESTING:
+  pytest tests/ -v                                  # Run unit tests
+  pytest tests/ --cov=app --cov-report=term-missing # With coverage
+  newman run postman/collections/cart_api_tests.postman_collection.json  # Postman
+
+LINTING:
+  ruff check .                   # Check
+  ruff check . --fix             # Auto-fix
+  bandit -r app/ -ll             # Security scan
+  safety check                   # CVE check
+  mypy app/ --ignore-missing-imports   # Type check
+
+DEPLOYMENT (SCRIPTS):
+  ./scripts/deploy-blue-green.sh --image-tag v1.2.3
+  ./scripts/deploy-canary.sh --image-tag v1.2.3 --weight 10
+  ./scripts/rollback.sh --mode alb --alb-listener-arn <ARN> --stable-tg-arn <ARN>
+  ./scripts/rollback.sh --mode db --db-url postgresql://...
+  ./scripts/rollback.sh --mode full --alb-listener-arn <ARN> --stable-tg-arn <ARN> \
+    --canary-tg-arn <ARN> --db-url postgresql://...
+  ./scripts/health_check.sh http://your-app-url.com
+
+AWS CLI:
+  # Check ALB traffic split
+  aws elbv2 describe-listeners \
+    --listener-arns <ALB_LISTENER_ARN> \
+    --query 'Listeners[0].DefaultActions[0].ForwardConfig.TargetGroups'
+
+  # Manually switch all traffic to blue
+  aws elbv2 modify-listener \
+    --listener-arn <ALB_LISTENER_ARN> \
+    --region us-east-1 \
+    --default-actions "Type=forward,ForwardConfig={TargetGroups=[\
+      {TargetGroupArn=<TG_BLUE_ARN>,Weight=100},\
+      {TargetGroupArn=<TG_GREEN_ARN>,Weight=0}]}"
+
+  # Check target group health
+  aws elbv2 describe-target-health --target-group-arn <TG_BLUE_ARN>
+
+SONARQUBE LOCAL:
+  docker-compose -f sonarqube/docker-compose.sonar.yml up -d   # Start
+  docker-compose -f sonarqube/docker-compose.sonar.yml down    # Stop
+  # Access: http://localhost:9000  (admin/admin)
+
+GITHUB ACTIONS:
+  # Trigger CD manually
+  Go to: GitHub → Actions → CD — Blue-Green Deploy → Run workflow
+
+
+================================================================================
+END OF DEPLOYMENT GUIDE
+================================================================================

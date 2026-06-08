@@ -1,0 +1,234 @@
+name: CD — Blue-Green Deploy to AWS EC2
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Docker image tag to deploy (e.g. v1.2.3 or latest)"
+        required: false
+        default: "latest"
+      deploy_mode:
+        description: "Deploy mode: blue-green or canary"
+        required: false
+        default: "blue-green"
+        type: choice
+        options:
+          - blue-green
+          - canary
+      canary_weight:
+        description: "Canary traffic weight % (only used when mode=canary)"
+        required: false
+        default: "10"
+
+  workflow_call:
+    inputs:
+      image_tag:
+        type: string
+        required: false
+        default: "latest"
+
+# Required GitHub Secrets:
+#   EC2_BLUE_HOST         — Public IP of blue EC2 instance
+#   EC2_GREEN_HOST        — Public IP of green EC2 instance
+#   EC2_USER              — SSH user (ec2-user for Amazon Linux, ubuntu for Ubuntu)
+#   EC2_SSH_PRIVATE_KEY   — PEM key contents (paste entire key including headers)
+#   ALB_LISTENER_ARN      — ARN of ALB listener
+#   TG_BLUE_ARN           — ARN of Blue Target Group
+#   TG_GREEN_ARN          — ARN of Green Target Group
+#   AWS_ACCESS_KEY_ID     — IAM key with EC2/ELB describe+modify permissions
+#   AWS_SECRET_ACCESS_KEY — IAM secret
+#   AWS_REGION            — e.g. us-east-1
+#   DOCKERHUB_USERNAME    — DockerHub username
+#   DATABASE_URL          — PostgreSQL RDS connection string
+
+jobs:
+
+  preflight:
+    name: Preflight — check secrets
+    runs-on: ubuntu-latest
+    outputs:
+      secrets_ok: ${{ steps.check.outputs.ok }}
+    steps:
+      - name: Verify required secrets
+        id: check
+        run: |
+          MISSING=()
+          [ -z "${{ secrets.EC2_BLUE_HOST }}"         ] && MISSING+=("EC2_BLUE_HOST")
+          [ -z "${{ secrets.EC2_GREEN_HOST }}"        ] && MISSING+=("EC2_GREEN_HOST")
+          [ -z "${{ secrets.EC2_USER }}"              ] && MISSING+=("EC2_USER")
+          [ -z "${{ secrets.EC2_SSH_PRIVATE_KEY }}"   ] && MISSING+=("EC2_SSH_PRIVATE_KEY")
+          [ -z "${{ secrets.ALB_LISTENER_ARN }}"      ] && MISSING+=("ALB_LISTENER_ARN")
+          [ -z "${{ secrets.TG_BLUE_ARN }}"           ] && MISSING+=("TG_BLUE_ARN")
+          [ -z "${{ secrets.TG_GREEN_ARN }}"          ] && MISSING+=("TG_GREEN_ARN")
+          [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}"     ] && MISSING+=("AWS_ACCESS_KEY_ID")
+          [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ] && MISSING+=("AWS_SECRET_ACCESS_KEY")
+          [ -z "${{ secrets.DOCKERHUB_USERNAME }}"    ] && MISSING+=("DOCKERHUB_USERNAME")
+
+          if [ ${#MISSING[@]} -gt 0 ]; then
+            echo "::warning::Missing secrets: ${MISSING[*]}"
+            echo "Add them in Settings → Secrets → Actions, then re-run."
+            echo "ok=false" >> $GITHUB_OUTPUT
+          else
+            echo "All required secrets are present."
+            echo "ok=true" >> $GITHUB_OUTPUT
+          fi
+
+  deploy:
+    name: Deploy (${{ github.event.inputs.deploy_mode || 'blue-green' }})
+    runs-on: ubuntu-latest
+    needs: preflight
+    if: needs.preflight.outputs.secrets_ok == 'true'
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            ${{ secrets.AWS_REGION || 'us-east-1' }}
+
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key.pem
+          chmod 600 ~/.ssh/deploy_key.pem
+          ssh-keyscan -H "${{ secrets.EC2_BLUE_HOST }}"  >> ~/.ssh/known_hosts 2>/dev/null || true
+          ssh-keyscan -H "${{ secrets.EC2_GREEN_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Determine active ALB slot
+        id: slots
+        run: |
+          IMAGE_TAG="${{ github.event.inputs.image_tag || inputs.image_tag || 'latest' }}"
+          DOCKER_IMAGE="${{ secrets.DOCKERHUB_USERNAME }}/cart-api"
+
+          # Query ALB listener to find which TG is getting >= 50% traffic
+          LISTENER_JSON=$(aws elbv2 describe-listeners \
+            --listener-arns "${{ secrets.ALB_LISTENER_ARN }}" \
+            --query 'Listeners[0].DefaultActions[0].ForwardConfig.TargetGroups' \
+            --output json 2>/dev/null || echo "[]")
+
+          BLUE_WEIGHT=$(echo "$LISTENER_JSON" | python3 -c "
+          import sys, json
+          tgs = json.load(sys.stdin)
+          for tg in tgs:
+              if '${{ secrets.TG_BLUE_ARN }}' in tg.get('TargetGroupArn',''):
+                  print(tg.get('Weight', 0)); exit()
+          print(100)
+          " 2>/dev/null || echo "100")
+
+          if [ "$BLUE_WEIGHT" -ge 50 ]; then
+            echo "active_slot=blue"                              >> $GITHUB_OUTPUT
+            echo "inactive_slot=green"                          >> $GITHUB_OUTPUT
+            echo "inactive_host=${{ secrets.EC2_GREEN_HOST }}"  >> $GITHUB_OUTPUT
+            echo "active_host=${{ secrets.EC2_BLUE_HOST }}"    >> $GITHUB_OUTPUT
+            echo "inactive_tg=${{ secrets.TG_GREEN_ARN }}"     >> $GITHUB_OUTPUT
+            echo "active_tg=${{ secrets.TG_BLUE_ARN }}"        >> $GITHUB_OUTPUT
+          else
+            echo "active_slot=green"                            >> $GITHUB_OUTPUT
+            echo "inactive_slot=blue"                           >> $GITHUB_OUTPUT
+            echo "inactive_host=${{ secrets.EC2_BLUE_HOST }}"  >> $GITHUB_OUTPUT
+            echo "active_host=${{ secrets.EC2_GREEN_HOST }}"   >> $GITHUB_OUTPUT
+            echo "inactive_tg=${{ secrets.TG_BLUE_ARN }}"      >> $GITHUB_OUTPUT
+            echo "active_tg=${{ secrets.TG_GREEN_ARN }}"       >> $GITHUB_OUTPUT
+          fi
+
+          echo "image_tag=$IMAGE_TAG"           >> $GITHUB_OUTPUT
+          echo "docker_image=$DOCKER_IMAGE"     >> $GITHUB_OUTPUT
+
+          echo "Active slot  : blue weight=$BLUE_WEIGHT"
+          echo "Deploying to : $( [ "$BLUE_WEIGHT" -ge 50 ] && echo green || echo blue )"
+
+      - name: Deploy image to inactive slot (${{ steps.slots.outputs.inactive_slot }})
+        run: |
+          ssh -i ~/.ssh/deploy_key.pem \
+            -o StrictHostKeyChecking=no \
+            "${{ secrets.EC2_USER }}@${{ steps.slots.outputs.inactive_host }}" bash <<'REMOTE'
+          set -e
+          cd /home/$USER/app
+          export DOCKER_IMAGE="${{ steps.slots.outputs.docker_image }}"
+          export IMAGE_TAG="${{ steps.slots.outputs.image_tag }}"
+          export DATABASE_URL="${{ secrets.DATABASE_URL }}"
+
+          echo "Pulling $DOCKER_IMAGE:$IMAGE_TAG..."
+          docker pull "$DOCKER_IMAGE:$IMAGE_TAG"
+
+          echo "Restarting container..."
+          docker-compose -f docker-compose.prod.yml up -d --force-recreate
+
+          echo "Deploy to ${{ steps.slots.outputs.inactive_slot }} complete."
+          REMOTE
+
+      - name: Health check — ${{ steps.slots.outputs.inactive_slot }} slot
+        run: |
+          HOST="${{ steps.slots.outputs.inactive_host }}"
+          echo "Health checking http://$HOST:8000 ..."
+          for i in $(seq 1 15); do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "http://$HOST:8000/docs" || echo "000")
+            echo "  attempt $i/15 → HTTP $STATUS"
+            if [ "$STATUS" == "200" ]; then
+              echo "Slot is healthy."
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "::error::${{ steps.slots.outputs.inactive_slot }} never became healthy. Keeping ${{ steps.slots.outputs.active_slot }} live."
+          exit 1
+
+      - name: Smoke test on ${{ steps.slots.outputs.inactive_slot }}
+        run: |
+          HOST="${{ steps.slots.outputs.inactive_host }}"
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
+            -X POST "http://$HOST:8000/carts" \
+            -H "Content-Type: application/json" \
+            -d '{"user_id": 999}')
+          echo "POST /carts {user_id:999} → HTTP $STATUS (expect 404)"
+          [ "$STATUS" == "404" ] || { echo "::error::Smoke test failed."; exit 1; }
+          echo "Smoke test passed."
+
+      - name: Switch ALB traffic to ${{ steps.slots.outputs.inactive_slot }}
+        if: ${{ github.event.inputs.deploy_mode != 'canary' }}
+        run: |
+          aws elbv2 modify-listener \
+            --listener-arn "${{ secrets.ALB_LISTENER_ARN }}" \
+            --region       "${{ secrets.AWS_REGION || 'us-east-1' }}" \
+            --default-actions "Type=forward,ForwardConfig={TargetGroups=[\
+              {TargetGroupArn=${{ steps.slots.outputs.inactive_tg }},Weight=100},\
+              {TargetGroupArn=${{ steps.slots.outputs.active_tg }},Weight=0}\
+            ]}"
+
+          echo "──────────────────────────────────────────────────"
+          echo "Blue-Green switch COMPLETE"
+          echo "  NEW active  : ${{ steps.slots.outputs.inactive_slot }}"
+          echo "  NEW standby : ${{ steps.slots.outputs.active_slot }}"
+          echo "  Image       : ${{ steps.slots.outputs.docker_image }}:${{ steps.slots.outputs.image_tag }}"
+          echo "──────────────────────────────────────────────────"
+
+      - name: Canary traffic shift (${{ github.event.inputs.canary_weight || '10' }}%)
+        if: ${{ github.event.inputs.deploy_mode == 'canary' }}
+        run: |
+          CANARY_WEIGHT="${{ github.event.inputs.canary_weight || '10' }}"
+          STABLE_WEIGHT=$((100 - CANARY_WEIGHT))
+
+          aws elbv2 modify-listener \
+            --listener-arn "${{ secrets.ALB_LISTENER_ARN }}" \
+            --region       "${{ secrets.AWS_REGION || 'us-east-1' }}" \
+            --default-actions "Type=forward,ForwardConfig={TargetGroups=[\
+              {TargetGroupArn=${{ steps.slots.outputs.active_tg }},Weight=$STABLE_WEIGHT},\
+              {TargetGroupArn=${{ steps.slots.outputs.inactive_tg }},Weight=$CANARY_WEIGHT}\
+            ]}"
+
+          echo "Canary traffic split:"
+          echo "  ${{ steps.slots.outputs.active_slot }} (stable) : ${STABLE_WEIGHT}%"
+          echo "  ${{ steps.slots.outputs.inactive_slot }} (canary): ${CANARY_WEIGHT}%"
+          echo ""
+          echo "Monitor CloudWatch for 15-30 minutes."
+          echo "To promote: re-run this workflow with deploy_mode=blue-green"
+          echo "To rollback: run scripts/rollback.sh --mode alb"
+
+      - name: Cleanup SSH key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key.pem
