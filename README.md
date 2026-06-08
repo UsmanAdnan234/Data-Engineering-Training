@@ -2,7 +2,7 @@
 
 # Shopping Cart Database Schema
 
-## Overview
+#### Overview
 
 This project implements a normalized relational database schema for a shopping cart system. The database manages users, products, product variants, shopping carts, and cart items while maintaining data integrity through primary keys, foreign keys, unique constraints, check constraints, and cascading deletes.
 
