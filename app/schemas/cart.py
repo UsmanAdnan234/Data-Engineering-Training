@@ -1,6 +1,5 @@
 from pydantic import BaseModel, Field
 
-
 SQLITE_INT_MAX = 9223372036854775807
 
 

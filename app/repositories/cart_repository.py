@@ -1,6 +1,7 @@
+from abc import ABC, abstractmethod
+
 import psycopg2
 import psycopg2.extras
-from abc import ABC, abstractmethod
 
 from app.core.exceptions import DatabaseException
 

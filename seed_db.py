@@ -3,6 +3,7 @@ Run this before every test session to reset the DB to a clean, known state.
 Usage: python seed_db.py
 """
 import psycopg2
+
 from app.core.config import DATABASE_URL
 
 conn = psycopg2.connect(DATABASE_URL)

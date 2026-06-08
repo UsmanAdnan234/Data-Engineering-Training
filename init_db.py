@@ -4,6 +4,7 @@ Usage: python init_db.py
 After this, use Alembic for any schema changes: alembic upgrade head
 """
 import psycopg2
+
 from app.core.config import DATABASE_URL
 
 conn = psycopg2.connect(DATABASE_URL)
