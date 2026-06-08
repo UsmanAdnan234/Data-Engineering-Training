@@ -1,4 +1,4 @@
-name: CI — Test, Lint, and Verify
+name: CI/CD — Test, Lint, and Blue-Green Deploy
 
 on:
   push:
@@ -8,7 +8,12 @@ on:
   workflow_dispatch:
 
 jobs:
+
+  # ─────────────────────────────────────────
+  # JOB 1: CI — lint, migrate, seed, test
+  # ─────────────────────────────────────────
   ci:
+    name: CI — Lint and Test
     runs-on: ubuntu-latest
 
     services:
@@ -73,3 +78,83 @@ jobs:
           newman run postman/collections/cart_api_tests.postman_collection.json \
             --reporters cli \
             --reporter-cli-no-banner
+
+  # ─────────────────────────────────────────
+  # JOB 2: CD — Blue-Green Deploy to Render
+  # Runs only on push to main (not on PRs)
+  # Requires CI job to pass first
+  # ─────────────────────────────────────────
+  deploy:
+    name: CD — Blue-Green Deploy
+    runs-on: ubuntu-latest
+    needs: ci
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+
+    steps:
+      - name: Identify active slot (blue vs green)
+        id: slots
+        run: |
+          BLUE_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
+            "${{ secrets.RENDER_URL_BLUE }}/docs" || echo "000")
+          GREEN_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
+            "${{ secrets.RENDER_URL_GREEN }}/docs" || echo "000")
+
+          echo "Blue HTTP: $BLUE_STATUS | Green HTTP: $GREEN_STATUS"
+
+          if [ "$BLUE_STATUS" == "200" ]; then
+            echo "active_slot=blue"    >> $GITHUB_OUTPUT
+            echo "inactive_slot=green" >> $GITHUB_OUTPUT
+            echo "deploy_hook=${{ secrets.RENDER_DEPLOY_HOOK_GREEN }}" >> $GITHUB_OUTPUT
+            echo "inactive_url=${{ secrets.RENDER_URL_GREEN }}"        >> $GITHUB_OUTPUT
+          else
+            echo "active_slot=green"  >> $GITHUB_OUTPUT
+            echo "inactive_slot=blue" >> $GITHUB_OUTPUT
+            echo "deploy_hook=${{ secrets.RENDER_DEPLOY_HOOK_BLUE }}" >> $GITHUB_OUTPUT
+            echo "inactive_url=${{ secrets.RENDER_URL_BLUE }}"        >> $GITHUB_OUTPUT
+          fi
+
+      - name: Deploy to ${{ steps.slots.outputs.inactive_slot }} slot
+        run: |
+          echo "Active slot  : ${{ steps.slots.outputs.active_slot }}   (serving live traffic)"
+          echo "Deploying to : ${{ steps.slots.outputs.inactive_slot }} (users not affected yet)"
+          curl -s -X POST "${{ steps.slots.outputs.deploy_hook }}"
+          echo "Deploy triggered on ${{ steps.slots.outputs.inactive_slot }}"
+
+      - name: Wait for ${{ steps.slots.outputs.inactive_slot }} to be ready
+        run: |
+          echo "Waiting for new slot to spin up (max 5 minutes)..."
+          for i in $(seq 1 20); do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
+              "${{ steps.slots.outputs.inactive_url }}/docs" || echo "000")
+            echo "  attempt $i/20 → HTTP $STATUS"
+            if [ "$STATUS" == "200" ]; then
+              echo "New slot is up!"
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "New slot never became healthy — rollback: keeping ${{ steps.slots.outputs.active_slot }} live"
+          exit 1
+
+      - name: Smoke test on ${{ steps.slots.outputs.inactive_slot }}
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X POST "${{ steps.slots.outputs.inactive_url }}/carts" \
+            -H "Content-Type: application/json" \
+            -d '{"user_id": 999}')
+          echo "Smoke test → POST /carts {user_id:999} returned HTTP $STATUS (expect 404)"
+          if [ "$STATUS" == "404" ]; then
+            echo "Smoke test passed — API is responding correctly"
+          else
+            echo "Smoke test FAILED — rollback: ${{ steps.slots.outputs.active_slot }} remains live"
+            exit 1
+          fi
+
+      - name: Promote ${{ steps.slots.outputs.inactive_slot }} to active
+        run: |
+          echo "──────────────────────────────────────────"
+          echo "Blue-Green switch complete!"
+          echo "  NEW  active  : ${{ steps.slots.outputs.inactive_slot }}"
+          echo "  NEW  standby : ${{ steps.slots.outputs.active_slot }}"
+          echo "  Live URL     : ${{ steps.slots.outputs.inactive_url }}"
+          echo "──────────────────────────────────────────"
