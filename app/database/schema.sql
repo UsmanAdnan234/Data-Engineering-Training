@@ -1,51 +1,34 @@
-CREATE TABLE users (
-    user_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name VARCHAR(100) NOT NULL,
-    email VARCHAR(255) UNIQUE NOT NULL CHECK (email LIKE '%_@_%._%'),
-    phone VARCHAR(20) UNIQUE NOT NULL CHECK (phone GLOB '+[0-9]*' OR phone GLOB '[0-9]*')
+CREATE TABLE IF NOT EXISTS users (
+    user_id SERIAL PRIMARY KEY,
+    name    VARCHAR(100) NOT NULL,
+    email   VARCHAR(255) NOT NULL UNIQUE,
+    phone   VARCHAR(20)  NOT NULL UNIQUE
 );
 
-CREATE TABLE carts (
-    cart_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'checked_out')),
-
-    FOREIGN KEY(user_id)
-    REFERENCES users(user_id)
-    ON DELETE CASCADE
+CREATE TABLE IF NOT EXISTS products (
+    product_id SERIAL PRIMARY KEY,
+    name       VARCHAR(255) NOT NULL
 );
 
-CREATE TABLE products (
-    product_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name VARCHAR(255) NOT NULL
+CREATE TABLE IF NOT EXISTS product_variants (
+    variant_id SERIAL PRIMARY KEY,
+    product_id INTEGER        NOT NULL REFERENCES products(product_id) ON DELETE CASCADE,
+    color      VARCHAR(50),
+    size       VARCHAR(50),
+    price      NUMERIC(10,2) NOT NULL CHECK (price > 0),
+    stock      INTEGER       NOT NULL DEFAULT 0 CHECK (stock >= 0)
 );
 
-CREATE TABLE product_variants (
-    variant_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    product_id INTEGER NOT NULL,
-    color VARCHAR(50),
-    size VARCHAR(50),
-    price DECIMAL(10,2) NOT NULL CHECK(price > 0),
-    stock INTEGER NOT NULL CHECK(stock >= 0),
-
-    FOREIGN KEY(product_id)
-    REFERENCES products(product_id)
-    ON DELETE CASCADE
+CREATE TABLE IF NOT EXISTS carts (
+    cart_id SERIAL PRIMARY KEY,
+    user_id INTEGER     NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    status  VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'checked_out'))
 );
 
-CREATE TABLE cart_items (
-    item_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    cart_id INTEGER NOT NULL,
-    variant_id INTEGER NOT NULL,
-    quantity INTEGER NOT NULL DEFAULT 1 CHECK(quantity > 0),
-
-    FOREIGN KEY(cart_id)
-    REFERENCES carts(cart_id)
-    ON DELETE CASCADE,
-
-    FOREIGN KEY(variant_id)
-    REFERENCES product_variants(variant_id)
-    ON DELETE CASCADE,
-
-    UNIQUE(cart_id, variant_id)
+CREATE TABLE IF NOT EXISTS cart_items (
+    item_id    SERIAL  PRIMARY KEY,
+    cart_id    INTEGER NOT NULL REFERENCES carts(cart_id)            ON DELETE CASCADE,
+    variant_id INTEGER NOT NULL REFERENCES product_variants(variant_id) ON DELETE CASCADE,
+    quantity   INTEGER NOT NULL DEFAULT 1 CHECK (quantity > 0),
+    UNIQUE (cart_id, variant_id)
 );

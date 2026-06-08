@@ -1,12 +1,18 @@
-import sqlite3
-from app.core.config import DB_NAME
+"""
+Run once to create all tables in PostgreSQL.
+Usage: python init_db.py
+After this, use Alembic for any schema changes: alembic upgrade head
+"""
+import psycopg2
 
-conn = sqlite3.connect(DB_NAME)
+from app.core.config import DATABASE_URL
+
+conn = psycopg2.connect(DATABASE_URL)
 
 with open("app/database/schema.sql") as f:
-    conn.executescript(f.read())
+    conn.cursor().execute(f.read())
 
 conn.commit()
 conn.close()
 
-print("Database created successfully")
+print("Tables created successfully.")

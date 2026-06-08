@@ -1,0 +1,74 @@
+name: CI — Test, Lint, and Verify
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: cart_db
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cart_db
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run code quality check (Ruff)
+        run: ruff check .
+
+      - name: Run database migrations
+        run: alembic upgrade head
+
+      - name: Seed test data
+        run: python seed_db.py
+
+      - name: Start API server in background
+        run: |
+          uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+          echo "Waiting for server to be ready..."
+          for i in $(seq 1 15); do
+            curl -s http://localhost:8000/docs > /dev/null && echo "Server is up" && break
+            sleep 1
+          done
+
+      - name: Set up Node.js for Newman
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Newman
+        run: npm install -g newman
+
+      - name: Run Postman tests with Newman
+        run: |
+          newman run postman/collections/cart_api_tests.postman_collection.json \
+            --reporters cli \
+            --reporter-cli-no-banner

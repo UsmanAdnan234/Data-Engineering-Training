@@ -1,4 +1,5 @@
 import sqlite3
+
 from app.core.config import DB_NAME
 
 conn = sqlite3.connect(DB_NAME)
