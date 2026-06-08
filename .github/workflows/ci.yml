@@ -136,8 +136,19 @@ jobs:
           name: bandit-report
         continue-on-error: true
 
+      - name: Check SONAR_TOKEN
+        id: check_token
+        run: |
+          if [ -n "$SONAR_TOKEN" ]; then
+            echo "available=true" >> $GITHUB_OUTPUT
+          else
+            echo "available=false" >> $GITHUB_OUTPUT
+          fi
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
       - name: SonarCloud Scan
-        if: ${{ secrets.SONAR_TOKEN != '' }}
+        if: steps.check_token.outputs.available == 'true'
         uses: SonarSource/sonarcloud-github-action@master
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
