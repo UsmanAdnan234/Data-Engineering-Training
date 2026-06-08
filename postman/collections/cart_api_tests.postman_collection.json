@@ -223,7 +223,7 @@
         },
 
         {
-          "name": "TC-10 — user_id is a decimal number",
+          "name": "TC-10 — user_id is a decimal number (float not allowed)",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
@@ -234,11 +234,11 @@
             "listen": "test",
             "script": { "type": "text/javascript", "exec": [
               "pm.test('Status 422', () => pm.response.to.have.status(422));",
-              "pm.test('VALIDATION_ERROR, must be integer', () => {",
+              "pm.test('VALIDATION_ERROR, no decimal allowed', () => {",
               "    const b = pm.response.json();",
               "    pm.expect(b.error).to.equal('VALIDATION_ERROR');",
               "    pm.expect(b.details[0].field).to.equal('user_id');",
-              "    pm.expect(b.details[0].message).to.equal('Must be a valid integer');",
+              "    pm.expect(b.details[0].message).to.equal('Must be a valid integer (no decimal allowed)');",
               "});"
             ]}
           }]
