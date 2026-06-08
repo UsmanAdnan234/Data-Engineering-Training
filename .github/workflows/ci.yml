@@ -93,12 +93,17 @@ jobs:
     steps:
       - name: Validate Render deployment configuration
         id: deploy_config
+        env:
+          RENDER_URL_BLUE: ${{ secrets.RENDER_URL_BLUE }}
+          RENDER_URL_GREEN: ${{ secrets.RENDER_URL_GREEN }}
+          RENDER_DEPLOY_HOOK_BLUE: ${{ secrets.RENDER_DEPLOY_HOOK_BLUE }}
+          RENDER_DEPLOY_HOOK_GREEN: ${{ secrets.RENDER_DEPLOY_HOOK_GREEN }}
         run: |
           missing=()
-          [ -z "${{ secrets.RENDER_URL_BLUE }}" ] && missing+=("RENDER_URL_BLUE")
-          [ -z "${{ secrets.RENDER_URL_GREEN }}" ] && missing+=("RENDER_URL_GREEN")
-          [ -z "${{ secrets.RENDER_DEPLOY_HOOK_BLUE }}" ] && missing+=("RENDER_DEPLOY_HOOK_BLUE")
-          [ -z "${{ secrets.RENDER_DEPLOY_HOOK_GREEN }}" ] && missing+=("RENDER_DEPLOY_HOOK_GREEN")
+          [ -z "$RENDER_URL_BLUE" ] && missing+=("RENDER_URL_BLUE")
+          [ -z "$RENDER_URL_GREEN" ] && missing+=("RENDER_URL_GREEN")
+          [ -z "$RENDER_DEPLOY_HOOK_BLUE" ] && missing+=("RENDER_DEPLOY_HOOK_BLUE")
+          [ -z "$RENDER_DEPLOY_HOOK_GREEN" ] && missing+=("RENDER_DEPLOY_HOOK_GREEN")
 
           if [ ${#missing[@]} -gt 0 ]; then
             echo "::warning::Skipping blue-green deploy because required secrets are missing: ${missing[*]}"
