@@ -91,6 +91,19 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
 
     steps:
+      - name: Check secrets are configured
+        run: |
+          if [ -z "${{ secrets.RENDER_URL_BLUE }}" ] || \
+             [ -z "${{ secrets.RENDER_URL_GREEN }}" ] || \
+             [ -z "${{ secrets.RENDER_DEPLOY_HOOK_BLUE }}" ] || \
+             [ -z "${{ secrets.RENDER_DEPLOY_HOOK_GREEN }}" ]; then
+            echo "::warning::Blue-green secrets not configured — skipping deploy."
+            echo "Add RENDER_URL_BLUE, RENDER_URL_GREEN, RENDER_DEPLOY_HOOK_BLUE,"
+            echo "and RENDER_DEPLOY_HOOK_GREEN in repo Settings → Secrets → Actions."
+            exit 0
+          fi
+          echo "All secrets present — proceeding with blue-green deploy."
+
       - name: Identify active slot (blue vs green)
         id: slots
         run: |
