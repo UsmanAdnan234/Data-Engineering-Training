@@ -93,7 +93,7 @@ def createCart(payload: CreateCartRequest, service: ICartService = Depends(getCa
         )
         _err(503, "SERVICE_UNAVAILABLE", "Service temporarily unavailable")
 
-    except Exception as e:
+    except Exception:
         logger.exception(
             f"[createCart] | status_code=500 | error=INTERNAL_ERROR | user_id={payload.user_id}"
         )
