@@ -17,6 +17,7 @@ from app.core.logger import logger
 from app.database.connection import DatabaseConnection
 from app.repositories.cart_repository import CartRepository
 from app.schemas.cart import (
+    SQLITE_INT_MAX,
     AddCartItemRequest,
     AddCartItemResponse,
     CheckoutResponse,
@@ -29,13 +30,14 @@ from app.services.cart_service import CartService, ICartService
 
 router = APIRouter()
 
-SQLITE_INT_MAX = 9223372036854775807
-
 
 def get_db() -> Generator:
     conn = DatabaseConnection.getconn()
     try:
         yield conn
+    except Exception:
+        conn.rollback()
+        raise
     finally:
         DatabaseConnection.putconn(conn)
 
