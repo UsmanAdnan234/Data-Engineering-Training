@@ -91,8 +91,25 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
 
     steps:
+      - name: Validate Render deployment configuration
+        id: deploy_config
+        run: |
+          missing=()
+          [ -z "${{ secrets.RENDER_URL_BLUE }}" ] && missing+=("RENDER_URL_BLUE")
+          [ -z "${{ secrets.RENDER_URL_GREEN }}" ] && missing+=("RENDER_URL_GREEN")
+          [ -z "${{ secrets.RENDER_DEPLOY_HOOK_BLUE }}" ] && missing+=("RENDER_DEPLOY_HOOK_BLUE")
+          [ -z "${{ secrets.RENDER_DEPLOY_HOOK_GREEN }}" ] && missing+=("RENDER_DEPLOY_HOOK_GREEN")
+
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::warning::Skipping blue-green deploy because required secrets are missing: ${missing[*]}"
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Identify active slot (blue vs green)
         id: slots
+        if: steps.deploy_config.outputs.enabled == 'true'
         run: |
           BLUE_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
             "${{ secrets.RENDER_URL_BLUE }}/docs" || echo "000")
@@ -114,6 +131,7 @@ jobs:
           fi
 
       - name: Deploy to ${{ steps.slots.outputs.inactive_slot }} slot
+        if: steps.deploy_config.outputs.enabled == 'true'
         run: |
           echo "Active slot  : ${{ steps.slots.outputs.active_slot }}   (serving live traffic)"
           echo "Deploying to : ${{ steps.slots.outputs.inactive_slot }} (users not affected yet)"
@@ -121,6 +139,7 @@ jobs:
           echo "Deploy triggered on ${{ steps.slots.outputs.inactive_slot }}"
 
       - name: Wait for ${{ steps.slots.outputs.inactive_slot }} to be ready
+        if: steps.deploy_config.outputs.enabled == 'true'
         run: |
           echo "Waiting for new slot to spin up (max 5 minutes)..."
           for i in $(seq 1 20); do
@@ -137,6 +156,7 @@ jobs:
           exit 1
 
       - name: Smoke test on ${{ steps.slots.outputs.inactive_slot }}
+        if: steps.deploy_config.outputs.enabled == 'true'
         run: |
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
             -X POST "${{ steps.slots.outputs.inactive_url }}/carts" \
@@ -151,6 +171,7 @@ jobs:
           fi
 
       - name: Promote ${{ steps.slots.outputs.inactive_slot }} to active
+        if: steps.deploy_config.outputs.enabled == 'true'
         run: |
           echo "──────────────────────────────────────────"
           echo "Blue-Green switch complete!"
