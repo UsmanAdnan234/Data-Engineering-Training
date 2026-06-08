@@ -119,7 +119,7 @@ class CartRepository(ICartRepository):
             "UPDATE carts SET status = 'checked_out' WHERE cart_id = %s",
             (cartId,)
         )
-        self._conn.commit()
+        # no commit here — reduceStock commits both operations atomically
         return cur.rowcount
 
     def getVariant(self, variantId: int):
