@@ -1,4 +1,5 @@
-import sqlite3
+import psycopg2
+import psycopg2.extras
 from abc import ABC, abstractmethod
 
 from app.core.exceptions import DatabaseException
@@ -56,146 +57,149 @@ class CartRepository(ICartRepository):
 
     def _execute(self, query: str, params: tuple = ()):
         try:
-            return self._conn.execute(query, params)
-        except sqlite3.OperationalError as e:
+            cur = self._conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cur.execute(query, params)
+            return cur
+        except psycopg2.OperationalError as e:
             raise DatabaseException(f"Operational error: {e}")
-        except sqlite3.IntegrityError as e:
+        except psycopg2.IntegrityError as e:
             raise DatabaseException(f"Integrity error: {e}")
-        except sqlite3.DatabaseError as e:
+        except psycopg2.Error as e:
             raise DatabaseException(f"Database error: {e}")
 
     def getUser(self, userId: int):
-        cursor = self._execute(
-            "SELECT user_id FROM users WHERE user_id = ?",
+        cur = self._execute(
+            "SELECT user_id FROM users WHERE user_id = %s",
             (userId,)
         )
-        return cursor.fetchone()
+        return cur.fetchone()
 
     def getActiveCartByUser(self, userId: int):
-        cursor = self._execute(
+        cur = self._execute(
             """
             SELECT cart_id, user_id, status
             FROM carts
-            WHERE user_id = ?
+            WHERE user_id = %s
             AND status = 'active'
             """,
             (userId,)
         )
-        return cursor.fetchone()
+        return cur.fetchone()
 
     def getCart(self, cartId: int):
-        cursor = self._execute(
+        cur = self._execute(
             """
             SELECT cart_id, user_id, status
             FROM carts
-            WHERE cart_id = ?
+            WHERE cart_id = %s
             """,
             (cartId,)
         )
-        return cursor.fetchone()
+        return cur.fetchone()
 
     def createCart(self, userId: int):
-        cursor = self._execute(
-            "INSERT INTO carts(user_id) VALUES(?)",
+        cur = self._execute(
+            "INSERT INTO carts(user_id) VALUES(%s) RETURNING cart_id",
             (userId,)
         )
         self._conn.commit()
-        return cursor.lastrowid
+        return cur.fetchone()["cart_id"]
 
     def deleteCart(self, cartId: int):
-        cursor = self._execute(
-            "DELETE FROM carts WHERE cart_id = ?",
+        cur = self._execute(
+            "DELETE FROM carts WHERE cart_id = %s",
             (cartId,)
         )
         self._conn.commit()
-        return cursor.rowcount
+        return cur.rowcount
 
     def checkoutCart(self, cartId: int):
-        cursor = self._execute(
-            "UPDATE carts SET status = 'checked_out' WHERE cart_id = ?",
+        cur = self._execute(
+            "UPDATE carts SET status = 'checked_out' WHERE cart_id = %s",
             (cartId,)
         )
         self._conn.commit()
-        return cursor.rowcount
+        return cur.rowcount
 
     def getVariant(self, variantId: int):
-        cursor = self._execute(
-            "SELECT variant_id, stock FROM product_variants WHERE variant_id = ?",
+        cur = self._execute(
+            "SELECT variant_id, stock FROM product_variants WHERE variant_id = %s",
             (variantId,)
         )
-        return cursor.fetchone()
+        return cur.fetchone()
 
     def getCartItem(self, cartId: int, variantId: int):
-        cursor = self._execute(
+        cur = self._execute(
             """
             SELECT item_id, quantity
             FROM cart_items
-            WHERE cart_id = ? AND variant_id = ?
+            WHERE cart_id = %s AND variant_id = %s
             """,
             (cartId, variantId)
         )
-        return cursor.fetchone()
+        return cur.fetchone()
 
     def getItemInCart(self, itemId: int, cartId: int):
-        cursor = self._execute(
+        cur = self._execute(
             """
             SELECT item_id
             FROM cart_items
-            WHERE item_id = ? AND cart_id = ?
+            WHERE item_id = %s AND cart_id = %s
             """,
             (itemId, cartId)
         )
-        return cursor.fetchone()
+        return cur.fetchone()
 
     def cartHasItems(self, cartId: int) -> bool:
-        cursor = self._execute(
-            "SELECT COUNT(*) AS count FROM cart_items WHERE cart_id = ?",
+        cur = self._execute(
+            "SELECT COUNT(*) AS count FROM cart_items WHERE cart_id = %s",
             (cartId,)
         )
-        row = cursor.fetchone()
+        row = cur.fetchone()
         return row["count"] > 0
 
     def addItem(self, cartId: int, variantId: int, quantity: int):
-        cursor = self._execute(
+        cur = self._execute(
             """
             INSERT INTO cart_items (cart_id, variant_id, quantity)
-            VALUES (?, ?, ?)
+            VALUES (%s, %s, %s)
+            RETURNING item_id
             """,
             (cartId, variantId, quantity)
         )
         self._conn.commit()
-        return cursor.lastrowid
+        return cur.fetchone()["item_id"]
 
     def updateQuantity(self, itemId: int, quantity: int):
-        cursor = self._execute(
-            "UPDATE cart_items SET quantity = ? WHERE item_id = ?",
+        cur = self._execute(
+            "UPDATE cart_items SET quantity = %s WHERE item_id = %s",
             (quantity, itemId)
         )
         self._conn.commit()
-        return cursor.rowcount
+        return cur.rowcount
 
     def deleteCartItem(self, itemId: int):
-        cursor = self._execute(
-            "DELETE FROM cart_items WHERE item_id = ?",
+        cur = self._execute(
+            "DELETE FROM cart_items WHERE item_id = %s",
             (itemId,)
         )
         self._conn.commit()
-        return cursor.rowcount
+        return cur.rowcount
 
     def reduceStock(self, cartId: int):
-        cursor = self._execute(
+        cur = self._execute(
             """
             UPDATE product_variants
             SET stock = stock - (
                 SELECT quantity FROM cart_items
                 WHERE variant_id = product_variants.variant_id
-                AND cart_id = ?
+                AND cart_id = %s
             )
             WHERE variant_id IN (
-                SELECT variant_id FROM cart_items WHERE cart_id = ?
+                SELECT variant_id FROM cart_items WHERE cart_id = %s
             )
             """,
             (cartId, cartId)
         )
         self._conn.commit()
-        return cursor.rowcount
+        return cur.rowcount

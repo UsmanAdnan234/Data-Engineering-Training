@@ -1,21 +1,26 @@
-import sqlite3
-import threading
+import psycopg2
+import psycopg2.pool
 
-from app.core.config import DB_NAME
+from app.core.config import DATABASE_URL
 
 
 class DatabaseConnection:
-    """
-    Thread-local singleton. Each thread gets one connection that is reused
-    across all requests on that thread — no open/close per request.
-    """
-    _local = threading.local()
+    _pool: psycopg2.pool.ThreadedConnectionPool = None
 
     @classmethod
-    def getInstance(cls):
-        if not hasattr(cls._local, "conn") or cls._local.conn is None:
-            conn = sqlite3.connect(DB_NAME)
-            conn.row_factory = sqlite3.Row
-            conn.execute("PRAGMA journal_mode=WAL")
-            cls._local.conn = conn
-        return cls._local.conn
+    def _getPool(cls) -> psycopg2.pool.ThreadedConnectionPool:
+        if cls._pool is None:
+            cls._pool = psycopg2.pool.ThreadedConnectionPool(
+                minconn=1,
+                maxconn=10,
+                dsn=DATABASE_URL
+            )
+        return cls._pool
+
+    @classmethod
+    def getconn(cls):
+        return cls._getPool().getconn()
+
+    @classmethod
+    def putconn(cls, conn) -> None:
+        cls._getPool().putconn(conn)

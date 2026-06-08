@@ -1,0 +1,178 @@
+================================================================================
+CHANGES SUMMARY — PostgreSQL Migration + Production Setup
+================================================================================
+
+This document lists every file that was created or modified and explains why.
+
+--------------------------------------------------------------------------------
+MODIFIED FILES
+--------------------------------------------------------------------------------
+
+1. app/core/config.py
+   BEFORE: DB_NAME = "cart.db"
+   AFTER:  Reads DATABASE_URL from .env file using python-dotenv.
+   WHY:    SQLite stores data in a file on your laptop. PostgreSQL is a real
+           database server. The URL tells the app where to find PostgreSQL.
+           Example URL: postgresql://user:password@host:5432/dbname
+
+2. app/database/connection.py
+   BEFORE: Thread-local singleton using sqlite3.connect()
+   AFTER:  Connection pool using psycopg2.pool.ThreadedConnectionPool
+   WHY:    SQLite connection = open a file. PostgreSQL connection = network
+           socket to a server. Opening a new socket per request is slow.
+           A pool keeps 1-10 connections open and reuses them — much faster.
+           getconn() borrows a connection. putconn() returns it to the pool.
+
+3. app/database/schema.sql
+   BEFORE: SQLite syntax — INTEGER PRIMARY KEY AUTOINCREMENT, GLOB checks
+   AFTER:  PostgreSQL syntax — SERIAL PRIMARY KEY, standard CHECK constraints
+   WHY:    SQLite and PostgreSQL have different SQL dialects.
+           AUTOINCREMENT becomes SERIAL (or GENERATED ALWAYS AS IDENTITY).
+           SQLite-specific GLOB is removed — PostgreSQL uses SIMILAR TO or regex.
+
+4. app/repositories/cart_repository.py
+   BEFORE: sqlite3, ? placeholders, cursor.lastrowid, sqlite3.Row
+   AFTER:  psycopg2, %s placeholders, RETURNING clause, RealDictCursor
+   WHY:    psycopg2 is the PostgreSQL driver for Python. Three things changed:
+           a) Placeholder: SQLite uses ? but PostgreSQL driver uses %s
+           b) Getting inserted ID: SQLite has cursor.lastrowid.
+              PostgreSQL needs "RETURNING cart_id" in the INSERT query.
+           c) Dict access: SQLite Row lets you do row["column"].
+              psycopg2 RealDictCursor does the same thing for PostgreSQL rows.
+           d) Exception types: sqlite3.OperationalError -> psycopg2.OperationalError
+
+5. app/api/cart.py
+   BEFORE: getCartService() calls DatabaseConnection.getInstance() directly
+   AFTER:  Uses get_db() as a FastAPI dependency with yield
+   WHY:    With a connection pool, connections must be returned after each
+           request. FastAPI's Depends(get_db) pattern does this automatically:
+           - Before request: borrow connection from pool
+           - After request (even on error): return connection to pool
+           This prevents connection leaks (pool running out of connections).
+
+6. requirements.txt
+   ADDED: psycopg2-binary, python-dotenv, alembic, sqlalchemy, ruff
+   REMOVED: nothing (fastapi, uvicorn, pydantic stay the same)
+   WHY:
+   - psycopg2-binary: PostgreSQL driver (binary = no system libs needed)
+   - python-dotenv: reads .env file
+   - alembic: database migration tool
+   - sqlalchemy: required by alembic internally
+   - ruff: fast Python linter for code quality checks
+
+7. init_db.py
+   BEFORE: sqlite3.connect() + executescript() for SQLite
+   AFTER:  psycopg2.connect() + execute() for PostgreSQL
+   WHY:    Updated to use new database driver. Note: after initial setup,
+           use "alembic upgrade head" for all schema changes instead.
+
+8. check_db.py
+   NOTE:   This file still exists but is replaced by seed_db.py for
+           automated seeding. check_db.py was SQLite-specific.
+
+--------------------------------------------------------------------------------
+NEW FILES CREATED
+--------------------------------------------------------------------------------
+
+9. seed_db.py
+   PURPOSE: Clears all data and inserts fresh test data before each test run.
+   IMPORTANT: Uses TRUNCATE ... RESTART IDENTITY CASCADE which resets
+              auto-increment counters so IDs always start at 1.
+              Run this before every Postman/Newman test session.
+
+10. .env.example
+    PURPOSE: Template showing what environment variables the app needs.
+             Copy to .env and fill in your database credentials.
+             .env is in .gitignore — never commit it to GitHub.
+
+11. .gitignore
+    PURPOSE: Tells Git which files to ignore.
+             Key things ignored: .env, __pycache__, *.db (old SQLite files),
+             log files, IDE folders.
+
+12. Dockerfile
+    PURPOSE: Defines how to package the app into a Docker container.
+    HOW IT WORKS:
+             - Starts from official Python 3.12 image
+             - Copies your code in
+             - Installs dependencies
+             - On start: runs migrations then starts the server
+    COMMAND:
+             docker build -t cart-api .
+             docker run -p 8000:8000 --env-file .env cart-api
+
+13. docker-compose.yml
+    PURPOSE: Runs BOTH the PostgreSQL database AND your API together locally.
+    HOW IT WORKS:
+             - db service: starts PostgreSQL on port 5432
+             - api service: builds your app, waits for db to be healthy, starts
+    COMMAND:
+             docker-compose up --build
+             Visit: http://localhost:8000/docs
+
+14. pyproject.toml
+    PURPOSE: Configuration for Ruff (code quality checker).
+    HOW IT WORKS: Running "ruff check ." scans your Python files for:
+             - E: PEP 8 style errors (spacing, formatting)
+             - F: Pyflakes errors (unused imports, undefined names)
+             - I: isort errors (import ordering)
+    COMMAND:
+             ruff check .          # show problems
+             ruff check . --fix    # auto-fix what it can
+
+15. alembic.ini
+    PURPOSE: Configuration file for Alembic migrations.
+             The database URL is set via environment variable in env.py,
+             not hardcoded here.
+
+16. alembic/env.py
+    PURPOSE: Alembic's setup script. Reads DATABASE_URL from environment
+             and connects to PostgreSQL to run migrations.
+
+17. alembic/script.py.mako
+    PURPOSE: Template file Alembic uses when you create a new migration.
+             You never edit this directly.
+
+18. alembic/versions/001_initial_schema.py
+    PURPOSE: First migration — creates all 5 tables from scratch.
+    HOW TO RUN:
+             alembic upgrade head     # run all pending migrations
+             alembic downgrade -1     # undo the last migration
+    HOW TO CREATE A NEW MIGRATION (e.g. add a column):
+             alembic revision -m "add_discount_to_cart_items"
+             # Edit the new file in alembic/versions/
+             # Add ALTER TABLE in upgrade(), reverse in downgrade()
+             alembic upgrade head
+
+19. .github/workflows/ci.yml
+    PURPOSE: GitHub Actions CI pipeline. Runs automatically on every git push.
+    WHAT IT DOES (in order):
+             1. Starts a PostgreSQL database
+             2. Installs Python dependencies
+             3. Runs Ruff code quality check
+             4. Runs Alembic migrations
+             5. Seeds test data (seed_db.py)
+             6. Starts the FastAPI server
+             7. Installs Newman (Postman CLI)
+             8. Runs all 50 Postman tests automatically
+    If any step fails, the pipeline turns red and you get an email.
+    This catches bugs before they reach production.
+
+20. render.yaml
+    PURPOSE: Tells Render (cloud hosting) how to deploy your app.
+    WHAT IT DOES:
+             - Creates a free PostgreSQL database called "cart-db"
+             - Deploys the API as a web service
+             - Runs migrations on every deploy
+             - Automatically sets DATABASE_URL from the database
+
+================================================================================
+FILES NOT CHANGED
+================================================================================
+
+- app/main.py              — no changes needed
+- app/services/cart_service.py — no changes needed
+- app/core/exceptions.py   — no changes needed
+- app/core/logger.py       — no changes needed
+- app/schemas/cart.py      — no changes needed
+- postman/                 — collection already created in Phase 2

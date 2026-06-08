@@ -1,0 +1,283 @@
+================================================================================
+HOW TO PROCEED — Step-by-Step Guide for Fresh Graduates
+================================================================================
+
+You have completed:
+  [DONE] Phase 1 — 50 test cases written
+  [DONE] Phase 2 — Postman collection created
+  [DONE] Phase 3 (partial) — Newman config ready (just need to install it)
+
+Follow the steps below in order.
+
+================================================================================
+STEP 1: Set Up PostgreSQL Locally
+================================================================================
+
+WHY: Your app now uses PostgreSQL instead of SQLite. You need a PostgreSQL
+     server running on your laptop before the app will work.
+
+OPTION A — Install PostgreSQL directly (recommended for beginners):
+  1. Download from: https://www.postgresql.org/download/windows/
+  2. Install with default settings (remember the password you set)
+  3. Open pgAdmin (installed automatically) or use Command Prompt
+  4. Create a database:
+       createdb -U postgres cart_db
+     OR in pgAdmin: right-click Databases > Create > Database > name: cart_db
+
+OPTION B — Use Docker (easiest, no install needed):
+  Just run: docker-compose up db
+  This starts PostgreSQL in a container. No installation needed.
+
+--------------------------------------------------------------------------------
+After PostgreSQL is running:
+--------------------------------------------------------------------------------
+
+1. Copy .env.example to .env:
+     copy .env.example .env      (Windows)
+     cp .env.example .env        (Mac/Linux)
+
+2. Edit .env and set your password:
+     DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@localhost:5432/cart_db
+
+3. Install dependencies:
+     pip install -r requirements.txt
+
+4. Run migrations (creates all tables):
+     alembic upgrade head
+
+5. Seed test data:
+     python seed_db.py
+
+6. Start the server:
+     uvicorn app.main:app --reload
+
+7. Test at: http://127.0.0.1:8000/docs
+
+
+================================================================================
+STEP 2: Run Tests Locally with Newman (Phase 3)
+================================================================================
+
+WHY: Newman is Postman's CLI (command line) version. It lets you run all 50
+     tests with one command instead of clicking in Postman. This is what gets
+     used in CI/CD.
+
+1. Install Node.js from: https://nodejs.org (choose LTS version)
+
+2. Install Newman:
+     npm install -g newman
+
+3. Make sure your server is running (uvicorn app.main:app --reload)
+
+4. Seed the database FIRST (tests depend on specific IDs):
+     python seed_db.py
+
+5. Run all 50 tests:
+     newman run postman/collections/cart_api_tests.postman_collection.json
+
+You will see every test case pass or fail with coloured output.
+Green = pass, Red = fail.
+
+IMPORTANT: Run seed_db.py before every Newman run. If you don't reset the
+data, IDs from previous runs will be wrong and tests will fail.
+
+
+================================================================================
+STEP 3: Run Code Quality Check (Phase 8)
+================================================================================
+
+WHY: Ruff catches bugs and bad style before they reach production.
+     Your CTO wants this in CI/CD.
+
+Run it locally:
+     ruff check .
+
+Fix issues automatically:
+     ruff check . --fix
+
+What Ruff checks:
+  - Unused imports (wastes memory)
+  - Undefined variables (crashes at runtime)
+  - Wrong indentation
+  - Import ordering
+
+In your GitHub Actions pipeline, this runs automatically on every push.
+If Ruff finds errors, the pipeline fails and no deployment happens.
+
+
+================================================================================
+STEP 4: Push Code to GitHub (Required for CI/CD)
+================================================================================
+
+WHY: GitHub Actions (your CI/CD pipeline) only runs when code is on GitHub.
+
+1. Create a GitHub account at github.com if you don't have one.
+
+2. Create a new repository:
+   - Go to github.com > New Repository
+   - Name: cart-api
+   - Make it Public (free)
+   - Do NOT initialize with README (you already have code)
+
+3. Push your code:
+     git init
+     git add .
+     git commit -m "Initial production-ready setup"
+     git branch -M main
+     git remote add origin https://github.com/YOUR_USERNAME/cart-api.git
+     git push -u origin main
+
+4. After pushing, go to github.com > your repo > Actions tab
+   You will see your CI pipeline running automatically!
+
+5. It will:
+   - Start PostgreSQL
+   - Run migrations
+   - Seed data
+   - Run all 50 Newman tests
+   - Show pass/fail for each
+
+If it's green, your code is production-ready.
+If it's red, click on the failing step to see the error.
+
+
+================================================================================
+STEP 5: Dockerize (Phase 5)
+================================================================================
+
+WHY: Docker packages your app + all its dependencies into one container.
+     It runs exactly the same on your laptop, your CTO's laptop, and the server.
+     "Works on my machine" problem is solved.
+
+1. Install Docker Desktop from: https://www.docker.com/products/docker-desktop/
+
+2. Build and run everything (app + PostgreSQL) with one command:
+     docker-compose up --build
+
+   Docker will:
+   - Download PostgreSQL image
+   - Build your app image
+   - Start both services
+   - Run migrations automatically
+   - Your API is at: http://localhost:8000/docs
+
+3. To stop:
+     docker-compose down
+
+4. To rebuild after code changes:
+     docker-compose up --build
+
+
+================================================================================
+STEP 6: Deploy to Render (Phase 9)
+================================================================================
+
+WHY: Render is a free cloud platform perfect for student projects.
+     It gives you a real URL that anyone can access.
+
+1. Create account at: https://render.com (use your GitHub account to sign up)
+
+2. Connect your GitHub repository:
+   - Dashboard > New > Web Service
+   - Connect GitHub > select your cart-api repo
+
+3. Render will detect render.yaml automatically and:
+   - Create a free PostgreSQL database
+   - Deploy your API
+   - Run migrations on every deploy
+   - Give you a URL like: https://cart-api.onrender.com
+
+4. Your API docs will be at: https://cart-api.onrender.com/docs
+
+5. To see logs (Phase 4 — Cloud Logs):
+   Render Dashboard > your service > Logs tab
+   Every log.info(), log.warning(), log.error() you wrote appears here.
+   This is how you debug issues in production.
+
+IMPORTANT NOTES FOR FREE TIER:
+   - Free PostgreSQL on Render expires after 90 days
+   - Free web service sleeps after 15 minutes of inactivity
+   - First request after sleep takes ~30 seconds (cold start)
+   - This is fine for internship/demo projects
+
+
+================================================================================
+STEP 7: Alembic Migrations (Phase 7)
+================================================================================
+
+WHY: In a real company, you NEVER manually alter the database.
+     Everything goes through migration files tracked in git.
+
+HOW IT WORKS:
+  - 001_initial_schema.py creates all tables (already done)
+  - When you need to change the database (add a column, rename, etc.),
+    you create a new migration file instead of running SQL manually
+
+Example: You need to add a "created_at" column to carts:
+
+  1. Create a new migration:
+       alembic revision -m "add_created_at_to_carts"
+     This creates alembic/versions/002_add_created_at_to_carts.py
+
+  2. Edit the file:
+       def upgrade():
+           op.execute("ALTER TABLE carts ADD COLUMN created_at TIMESTAMP DEFAULT NOW()")
+       def downgrade():
+           op.execute("ALTER TABLE carts DROP COLUMN created_at")
+
+  3. Apply it:
+       alembic upgrade head
+
+  4. Commit to git and push — CI/CD runs it automatically on deploy
+
+GOLDEN RULE: Never run ALTER TABLE manually. Always use Alembic.
+
+To see migration history:
+     alembic history
+
+To undo last migration:
+     alembic downgrade -1
+
+
+================================================================================
+PHASE COMPLETION CHECKLIST
+================================================================================
+
+Phase 1  [DONE]  50 test cases (in README)
+Phase 2  [DONE]  Postman collection (cart_api_tests.postman_collection.json)
+Phase 3  [READY] Newman — install Node.js, then: npm install -g newman
+                           run: newman run postman/collections/cart_api_tests.postman_collection.json
+Phase 4  [AUTO]  Logs on Render — visible in Render Dashboard > Logs (free)
+Phase 5  [READY] Docker — install Docker Desktop, then: docker-compose up --build
+Phase 6  [READY] CI/CD — push to GitHub, GitHub Actions runs automatically
+Phase 7  [DONE]  Alembic set up — run: alembic upgrade head
+Phase 8  [READY] Ruff — run: ruff check .
+Phase 9  [READY] Render deployment — sign up, connect GitHub, done
+
+
+================================================================================
+TOOLS SUMMARY — All Free
+================================================================================
+
+Purpose          Tool              Free?   Where to get it
+-------          ----              -----   ---------------
+Database         PostgreSQL        YES     postgresql.org or Docker
+DB Migrations    Alembic           YES     pip install alembic
+DB Hosting       Render PostgreSQL YES     render.com (90 days)
+App Hosting      Render            YES     render.com
+Container        Docker            YES     docker.com
+CI/CD            GitHub Actions    YES     github.com (free for public repos)
+API Tests        Newman            YES     npm install -g newman
+Code Quality     Ruff              YES     pip install ruff
+Version Control  Git + GitHub      YES     git-scm.com + github.com
+
+
+================================================================================
+RECOMMENDED ORDER FOR THIS WEEK
+================================================================================
+
+Day 1: Set up PostgreSQL locally, run migrations, seed data, test locally
+Day 2: Run Newman tests locally, fix any failures
+Day 3: Push to GitHub, watch GitHub Actions run
+Day 4: Build Docker image, run docker-compose up
+Day 5: Deploy to Render, test the live URL, show your CTO

@@ -66111,3 +66111,481 @@ OverflowError: Python int too large to convert to SQLite INTEGER
 2026-06-05 01:09:08,187 WARNING [main.validationExceptionHandler:47] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'int_from_float', 'loc': ('body', 'user_id'), 'msg': 'Input should be a valid integer, got a number with a fractional part', 'input': 1.5}]
 2026-06-05 01:11:50,653 WARNING [main.validationExceptionHandler:47] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'int_from_float', 'loc': ('body', 'user_id'), 'msg': 'Input should be a valid integer, got a number with a fractional part', 'input': 1.5}]
 2026-06-05 01:12:57,808 WARNING [main.validationExceptionHandler:47] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'int_from_float', 'loc': ('body', 'user_id'), 'msg': 'Input should be a valid integer, got a number with a fractional part', 'input': 1.5}]
+2026-06-05 01:20:02,775 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'int_from_float', 'loc': ('body', 'user_id'), 'msg': 'Input should be a valid integer, got a number with a fractional part', 'input': 1.5}]
+2026-06-05 01:20:26,322 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'int_from_float', 'loc': ('body', 'user_id'), 'msg': 'Input should be a valid integer, got a number with a fractional part', 'input': 1.5}]
+2026-06-05 01:20:55,585 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'int_from_float', 'loc': ('body', 'user_id'), 'msg': 'Input should be a valid integer, got a number with a fractional part', 'input': 1.5}]
+2026-06-05 01:21:15,335 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'int_from_float', 'loc': ('body', 'user_id'), 'msg': 'Input should be a valid integer, got a number with a fractional part', 'input': 1.5}]
+2026-06-05 01:21:27,831 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'int_from_float', 'loc': ('body', 'user_id'), 'msg': 'Input should be a valid integer, got a number with a fractional part', 'input': 1.5}]
+2026-06-05 01:21:41,694 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'int_from_float', 'loc': ('body', 'user_id'), 'msg': 'Input should be a valid integer, got a number with a fractional part', 'input': 1.5}]
+2026-06-05 01:24:28,665 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'int_from_float', 'loc': ('body', 'user_id'), 'msg': 'Input should be a valid integer, got a number with a fractional part', 'input': 1.5}]
+2026-06-05 01:24:46,259 INFO [cart.createCart:47] [createCart] | event=request_received | user_id=1
+2026-06-05 01:24:46,262 INFO [cart.createCart:52] [createCart] | status_code=201 | event=cart_created | cart_id=1 | user_id=1
+2026-06-05 01:24:46,428 INFO [cart.createCart:47] [createCart] | event=request_received | user_id=2
+2026-06-05 01:24:46,430 INFO [cart.createCart:52] [createCart] | status_code=201 | event=cart_created | cart_id=2 | user_id=2
+2026-06-05 01:24:46,523 INFO [cart.createCart:47] [createCart] | event=request_received | user_id=1
+2026-06-05 01:24:46,523 WARNING [cart.createCart:71] [createCart] | status_code=409 | error=CART_ALREADY_EXISTS | user_id=1 | cause=User id=1 already has an active cart (cart_id=1)
+2026-06-05 01:24:46,585 INFO [cart.createCart:47] [createCart] | event=request_received | user_id=999
+2026-06-05 01:24:46,585 WARNING [cart.createCart:64] [createCart] | status_code=404 | error=USER_NOT_FOUND | user_id=999 | cause=User with id=999 not found
+2026-06-05 01:24:46,680 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'greater_than', 'loc': ('body', 'user_id'), 'msg': 'Input should be greater than 0', 'input': 0, 'ctx': {'gt': 0}}]
+2026-06-05 01:24:46,773 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'greater_than', 'loc': ('body', 'user_id'), 'msg': 'Input should be greater than 0', 'input': -5, 'ctx': {'gt': 0}}]
+2026-06-05 01:24:46,865 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'int_parsing', 'loc': ('body', 'user_id'), 'msg': 'Input should be a valid integer, unable to parse string as an integer', 'input': 'abc'}]
+2026-06-05 01:24:46,956 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'missing', 'loc': ('body', 'user_id'), 'msg': 'Field required', 'input': {}}]
+2026-06-05 01:24:47,051 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'less_than_equal', 'loc': ('body', 'user_id'), 'msg': 'Input should be less than or equal to 9223372036854775807', 'input': 99999999999999999999, 'ctx': {'le': 9223372036854775807}}]
+2026-06-05 01:24:47,144 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'int_from_float', 'loc': ('body', 'user_id'), 'msg': 'Input should be a valid integer, got a number with a fractional part', 'input': 1.5}]
+2026-06-05 01:25:08,287 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=1 | variant_id=1 | quantity=2
+2026-06-05 01:25:08,291 INFO [cart.addItem:102] [addItem] | status_code=201 | event=item_added | cart_id=1 | item_id=1 | quantity=2
+2026-06-05 01:25:08,461 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=1 | variant_id=1 | quantity=3
+2026-06-05 01:25:08,465 INFO [cart.addItem:102] [addItem] | status_code=201 | event=item_added | cart_id=1 | item_id=1 | quantity=5
+2026-06-05 01:25:08,654 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=1 | variant_id=4 | quantity=1
+2026-06-05 01:25:08,659 INFO [cart.addItem:102] [addItem] | status_code=201 | event=item_added | cart_id=1 | item_id=2 | quantity=1
+2026-06-05 01:25:08,789 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=1 | variant_id=7 | quantity=5
+2026-06-05 01:25:08,793 INFO [cart.addItem:102] [addItem] | status_code=201 | event=item_added | cart_id=1 | item_id=3 | quantity=5
+2026-06-05 01:25:08,966 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=9999 | variant_id=1 | quantity=1
+2026-06-05 01:25:08,967 WARNING [cart.addItem:116] [addItem] | status_code=404 | error=CART_NOT_FOUND | cart_id=9999 | cause=Cart with id=9999 not found
+2026-06-05 01:25:09,078 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=1 | variant_id=9999 | quantity=1
+2026-06-05 01:25:09,078 WARNING [cart.addItem:128] [addItem] | status_code=404 | error=VARIANT_NOT_FOUND | cart_id=1 | variant_id=9999 | cause=Product variant with id=9999 not found
+2026-06-05 01:25:09,163 INFO [cart.createCart:47] [createCart] | event=request_received | user_id=3
+2026-06-05 01:25:09,170 INFO [cart.createCart:52] [createCart] | status_code=201 | event=cart_created | cart_id=3 | user_id=3
+2026-06-05 01:25:09,294 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=3 | variant_id=2 | quantity=1
+2026-06-05 01:25:09,298 INFO [cart.addItem:102] [addItem] | status_code=201 | event=item_added | cart_id=3 | item_id=4 | quantity=1
+2026-06-05 01:25:09,423 INFO [cart.checkout:237] [checkout] | event=request_received | cart_id=3
+2026-06-05 01:25:09,430 INFO [cart.checkout:242] [checkout] | status_code=200 | event=checkout_success | cart_id=3
+2026-06-05 01:25:09,528 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=3 | variant_id=3 | quantity=1
+2026-06-05 01:25:09,528 WARNING [cart.addItem:122] [addItem] | status_code=409 | error=CART_CHECKED_OUT | cart_id=3 | cause=Cart id=3 is already checked out, cannot add items
+2026-06-05 01:25:09,625 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=1 | variant_id=6 | quantity=10
+2026-06-05 01:25:09,628 INFO [cart.addItem:102] [addItem] | status_code=201 | event=item_added | cart_id=1 | item_id=5 | quantity=10
+2026-06-05 01:25:09,747 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=1 | variant_id=5 | quantity=7
+2026-06-05 01:25:09,751 INFO [cart.addItem:102] [addItem] | status_code=201 | event=item_added | cart_id=1 | item_id=6 | quantity=7
+2026-06-05 01:25:09,841 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=1 | variant_id=5 | quantity=5
+2026-06-05 01:25:09,844 INFO [cart.addItem:102] [addItem] | status_code=201 | event=item_added | cart_id=1 | item_id=6 | quantity=12
+2026-06-05 01:25:09,935 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/1/items | fields=['quantity'] | raw=[{'type': 'greater_than', 'loc': ('body', 'quantity'), 'msg': 'Input should be greater than 0', 'input': 0, 'ctx': {'gt': 0}}]
+2026-06-05 01:25:10,015 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/1/items | fields=['quantity'] | raw=[{'type': 'greater_than', 'loc': ('body', 'quantity'), 'msg': 'Input should be greater than 0', 'input': -3, 'ctx': {'gt': 0}}]
+2026-06-05 01:25:10,093 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/1/items | fields=['variant_id'] | raw=[{'type': 'greater_than', 'loc': ('body', 'variant_id'), 'msg': 'Input should be greater than 0', 'input': 0, 'ctx': {'gt': 0}}]
+2026-06-05 01:25:10,186 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/1/items | fields=['variant_id'] | raw=[{'type': 'greater_than', 'loc': ('body', 'variant_id'), 'msg': 'Input should be greater than 0', 'input': -1, 'ctx': {'gt': 0}}]
+2026-06-05 01:25:10,262 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/1/items | fields=['variant_id'] | raw=[{'type': 'missing', 'loc': ('body', 'variant_id'), 'msg': 'Field required', 'input': {'quantity': 2}}]
+2026-06-05 01:25:10,356 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/1/items | fields=['quantity'] | raw=[{'type': 'missing', 'loc': ('body', 'quantity'), 'msg': 'Field required', 'input': {'variant_id': 1}}]
+2026-06-05 01:28:09,045 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=1 | variant_id=1 | quantity=2
+2026-06-05 01:28:09,045 WARNING [cart.addItem:116] [addItem] | status_code=404 | error=CART_NOT_FOUND | cart_id=1 | cause=Cart with id=1 not found
+2026-06-05 01:28:09,232 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=1 | variant_id=1 | quantity=3
+2026-06-05 01:28:09,232 WARNING [cart.addItem:116] [addItem] | status_code=404 | error=CART_NOT_FOUND | cart_id=1 | cause=Cart with id=1 not found
+2026-06-05 01:28:09,324 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=1 | variant_id=4 | quantity=1
+2026-06-05 01:28:09,324 WARNING [cart.addItem:116] [addItem] | status_code=404 | error=CART_NOT_FOUND | cart_id=1 | cause=Cart with id=1 not found
+2026-06-05 01:28:09,420 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=1 | variant_id=7 | quantity=5
+2026-06-05 01:28:09,421 WARNING [cart.addItem:116] [addItem] | status_code=404 | error=CART_NOT_FOUND | cart_id=1 | cause=Cart with id=1 not found
+2026-06-05 01:28:09,497 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=9999 | variant_id=1 | quantity=1
+2026-06-05 01:28:09,497 WARNING [cart.addItem:116] [addItem] | status_code=404 | error=CART_NOT_FOUND | cart_id=9999 | cause=Cart with id=9999 not found
+2026-06-05 01:28:09,592 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=1 | variant_id=9999 | quantity=1
+2026-06-05 01:28:09,592 WARNING [cart.addItem:116] [addItem] | status_code=404 | error=CART_NOT_FOUND | cart_id=1 | cause=Cart with id=1 not found
+2026-06-05 01:28:09,684 INFO [cart.createCart:47] [createCart] | event=request_received | user_id=3
+2026-06-05 01:28:09,688 INFO [cart.createCart:52] [createCart] | status_code=201 | event=cart_created | cart_id=1 | user_id=3
+2026-06-05 01:28:09,779 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=1 | variant_id=2 | quantity=1
+2026-06-05 01:28:09,787 INFO [cart.addItem:102] [addItem] | status_code=201 | event=item_added | cart_id=1 | item_id=1 | quantity=1
+2026-06-05 01:28:09,888 INFO [cart.checkout:237] [checkout] | event=request_received | cart_id=1
+2026-06-05 01:28:09,898 INFO [cart.checkout:242] [checkout] | status_code=200 | event=checkout_success | cart_id=1
+2026-06-05 01:28:09,997 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=1 | variant_id=3 | quantity=1
+2026-06-05 01:28:09,998 WARNING [cart.addItem:122] [addItem] | status_code=409 | error=CART_CHECKED_OUT | cart_id=1 | cause=Cart id=1 is already checked out, cannot add items
+2026-06-05 01:28:10,092 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=1 | variant_id=6 | quantity=100
+2026-06-05 01:28:10,092 WARNING [cart.addItem:122] [addItem] | status_code=409 | error=CART_CHECKED_OUT | cart_id=1 | cause=Cart id=1 is already checked out, cannot add items
+2026-06-05 01:28:10,171 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=1 | variant_id=5 | quantity=7
+2026-06-05 01:28:10,171 WARNING [cart.addItem:122] [addItem] | status_code=409 | error=CART_CHECKED_OUT | cart_id=1 | cause=Cart id=1 is already checked out, cannot add items
+2026-06-05 01:28:10,263 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=1 | variant_id=5 | quantity=5
+2026-06-05 01:28:10,263 WARNING [cart.addItem:122] [addItem] | status_code=409 | error=CART_CHECKED_OUT | cart_id=1 | cause=Cart id=1 is already checked out, cannot add items
+2026-06-05 01:28:10,343 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/1/items | fields=['quantity'] | raw=[{'type': 'greater_than', 'loc': ('body', 'quantity'), 'msg': 'Input should be greater than 0', 'input': 0, 'ctx': {'gt': 0}}]
+2026-06-05 01:28:10,421 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/1/items | fields=['quantity'] | raw=[{'type': 'greater_than', 'loc': ('body', 'quantity'), 'msg': 'Input should be greater than 0', 'input': -3, 'ctx': {'gt': 0}}]
+2026-06-05 01:28:10,513 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/1/items | fields=['variant_id'] | raw=[{'type': 'greater_than', 'loc': ('body', 'variant_id'), 'msg': 'Input should be greater than 0', 'input': 0, 'ctx': {'gt': 0}}]
+2026-06-05 01:28:10,608 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/1/items | fields=['variant_id'] | raw=[{'type': 'greater_than', 'loc': ('body', 'variant_id'), 'msg': 'Input should be greater than 0', 'input': -1, 'ctx': {'gt': 0}}]
+2026-06-05 01:28:10,702 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/1/items | fields=['variant_id'] | raw=[{'type': 'missing', 'loc': ('body', 'variant_id'), 'msg': 'Field required', 'input': {'quantity': 2}}]
+2026-06-05 01:28:10,794 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/1/items | fields=['quantity'] | raw=[{'type': 'missing', 'loc': ('body', 'quantity'), 'msg': 'Field required', 'input': {'variant_id': 1}}]
+2026-06-05 01:30:53,373 INFO [cart.createCart:47] [createCart] | event=request_received | user_id=1
+2026-06-05 01:30:53,377 INFO [cart.createCart:52] [createCart] | status_code=201 | event=cart_created | cart_id=2 | user_id=1
+2026-06-05 01:30:53,526 INFO [cart.createCart:47] [createCart] | event=request_received | user_id=2
+2026-06-05 01:30:53,529 INFO [cart.createCart:52] [createCart] | status_code=201 | event=cart_created | cart_id=3 | user_id=2
+2026-06-05 01:30:53,635 INFO [cart.createCart:47] [createCart] | event=request_received | user_id=1
+2026-06-05 01:30:53,636 WARNING [cart.createCart:71] [createCart] | status_code=409 | error=CART_ALREADY_EXISTS | user_id=1 | cause=User id=1 already has an active cart (cart_id=2)
+2026-06-05 01:30:53,730 INFO [cart.createCart:47] [createCart] | event=request_received | user_id=999
+2026-06-05 01:30:53,730 WARNING [cart.createCart:64] [createCart] | status_code=404 | error=USER_NOT_FOUND | user_id=999 | cause=User with id=999 not found
+2026-06-05 01:30:53,821 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'greater_than', 'loc': ('body', 'user_id'), 'msg': 'Input should be greater than 0', 'input': 0, 'ctx': {'gt': 0}}]
+2026-06-05 01:30:53,916 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'greater_than', 'loc': ('body', 'user_id'), 'msg': 'Input should be greater than 0', 'input': -5, 'ctx': {'gt': 0}}]
+2026-06-05 01:30:54,008 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'int_parsing', 'loc': ('body', 'user_id'), 'msg': 'Input should be a valid integer, unable to parse string as an integer', 'input': 'abc'}]
+2026-06-05 01:30:54,103 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'missing', 'loc': ('body', 'user_id'), 'msg': 'Field required', 'input': {}}]
+2026-06-05 01:30:54,180 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'less_than_equal', 'loc': ('body', 'user_id'), 'msg': 'Input should be less than or equal to 9223372036854775807', 'input': 99999999999999999999, 'ctx': {'le': 9223372036854775807}}]
+2026-06-05 01:30:54,278 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'int_from_float', 'loc': ('body', 'user_id'), 'msg': 'Input should be a valid integer, got a number with a fractional part', 'input': 1.5}]
+2026-06-05 01:31:21,224 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=2 | variant_id=1 | quantity=2
+2026-06-05 01:31:21,225 WARNING [cart.addItem:116] [addItem] | status_code=404 | error=CART_NOT_FOUND | cart_id=2 | cause=Cart with id=2 not found
+2026-06-05 01:31:21,386 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=2 | variant_id=1 | quantity=3
+2026-06-05 01:31:21,386 WARNING [cart.addItem:116] [addItem] | status_code=404 | error=CART_NOT_FOUND | cart_id=2 | cause=Cart with id=2 not found
+2026-06-05 01:31:21,480 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=2 | variant_id=4 | quantity=1
+2026-06-05 01:31:21,480 WARNING [cart.addItem:116] [addItem] | status_code=404 | error=CART_NOT_FOUND | cart_id=2 | cause=Cart with id=2 not found
+2026-06-05 01:31:21,573 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=2 | variant_id=7 | quantity=5
+2026-06-05 01:31:21,573 WARNING [cart.addItem:116] [addItem] | status_code=404 | error=CART_NOT_FOUND | cart_id=2 | cause=Cart with id=2 not found
+2026-06-05 01:31:21,666 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=9999 | variant_id=1 | quantity=1
+2026-06-05 01:31:21,666 WARNING [cart.addItem:116] [addItem] | status_code=404 | error=CART_NOT_FOUND | cart_id=9999 | cause=Cart with id=9999 not found
+2026-06-05 01:31:21,760 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=2 | variant_id=9999 | quantity=1
+2026-06-05 01:31:21,761 WARNING [cart.addItem:116] [addItem] | status_code=404 | error=CART_NOT_FOUND | cart_id=2 | cause=Cart with id=2 not found
+2026-06-05 01:31:21,846 INFO [cart.createCart:47] [createCart] | event=request_received | user_id=3
+2026-06-05 01:31:21,848 INFO [cart.createCart:52] [createCart] | status_code=201 | event=cart_created | cart_id=1 | user_id=3
+2026-06-05 01:31:21,949 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=1 | variant_id=2 | quantity=1
+2026-06-05 01:31:21,951 INFO [cart.addItem:102] [addItem] | status_code=201 | event=item_added | cart_id=1 | item_id=1 | quantity=1
+2026-06-05 01:31:22,042 INFO [cart.checkout:237] [checkout] | event=request_received | cart_id=1
+2026-06-05 01:31:22,045 INFO [cart.checkout:242] [checkout] | status_code=200 | event=checkout_success | cart_id=1
+2026-06-05 01:31:22,135 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=1 | variant_id=3 | quantity=1
+2026-06-05 01:31:22,135 WARNING [cart.addItem:122] [addItem] | status_code=409 | error=CART_CHECKED_OUT | cart_id=1 | cause=Cart id=1 is already checked out, cannot add items
+2026-06-05 01:31:22,216 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=2 | variant_id=6 | quantity=100
+2026-06-05 01:31:22,216 WARNING [cart.addItem:116] [addItem] | status_code=404 | error=CART_NOT_FOUND | cart_id=2 | cause=Cart with id=2 not found
+2026-06-05 01:31:22,294 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=2 | variant_id=5 | quantity=7
+2026-06-05 01:31:22,294 WARNING [cart.addItem:116] [addItem] | status_code=404 | error=CART_NOT_FOUND | cart_id=2 | cause=Cart with id=2 not found
+2026-06-05 01:31:22,371 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=2 | variant_id=5 | quantity=5
+2026-06-05 01:31:22,372 WARNING [cart.addItem:116] [addItem] | status_code=404 | error=CART_NOT_FOUND | cart_id=2 | cause=Cart with id=2 not found
+2026-06-05 01:31:22,464 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/2/items | fields=['quantity'] | raw=[{'type': 'greater_than', 'loc': ('body', 'quantity'), 'msg': 'Input should be greater than 0', 'input': 0, 'ctx': {'gt': 0}}]
+2026-06-05 01:31:22,558 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/2/items | fields=['quantity'] | raw=[{'type': 'greater_than', 'loc': ('body', 'quantity'), 'msg': 'Input should be greater than 0', 'input': -3, 'ctx': {'gt': 0}}]
+2026-06-05 01:31:22,655 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/2/items | fields=['variant_id'] | raw=[{'type': 'greater_than', 'loc': ('body', 'variant_id'), 'msg': 'Input should be greater than 0', 'input': 0, 'ctx': {'gt': 0}}]
+2026-06-05 01:31:22,763 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/2/items | fields=['variant_id'] | raw=[{'type': 'greater_than', 'loc': ('body', 'variant_id'), 'msg': 'Input should be greater than 0', 'input': -1, 'ctx': {'gt': 0}}]
+2026-06-05 01:31:22,856 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/2/items | fields=['variant_id'] | raw=[{'type': 'missing', 'loc': ('body', 'variant_id'), 'msg': 'Field required', 'input': {'quantity': 2}}]
+2026-06-05 01:31:22,935 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/2/items | fields=['quantity'] | raw=[{'type': 'missing', 'loc': ('body', 'quantity'), 'msg': 'Field required', 'input': {'variant_id': 1}}]
+2026-06-05 01:31:49,235 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=2 | variant_id=1 | quantity=2
+2026-06-05 01:31:49,235 WARNING [cart.addItem:116] [addItem] | status_code=404 | error=CART_NOT_FOUND | cart_id=2 | cause=Cart with id=2 not found
+2026-06-05 01:32:09,444 INFO [cart.createCart:47] [createCart] | event=request_received | user_id=1
+2026-06-05 01:32:09,449 INFO [cart.createCart:52] [createCart] | status_code=201 | event=cart_created | cart_id=2 | user_id=1
+2026-06-05 01:32:09,601 INFO [cart.createCart:47] [createCart] | event=request_received | user_id=2
+2026-06-05 01:32:09,604 INFO [cart.createCart:52] [createCart] | status_code=201 | event=cart_created | cart_id=3 | user_id=2
+2026-06-05 01:32:09,695 INFO [cart.createCart:47] [createCart] | event=request_received | user_id=1
+2026-06-05 01:32:09,695 WARNING [cart.createCart:71] [createCart] | status_code=409 | error=CART_ALREADY_EXISTS | user_id=1 | cause=User id=1 already has an active cart (cart_id=2)
+2026-06-05 01:32:09,790 INFO [cart.createCart:47] [createCart] | event=request_received | user_id=999
+2026-06-05 01:32:09,792 WARNING [cart.createCart:64] [createCart] | status_code=404 | error=USER_NOT_FOUND | user_id=999 | cause=User with id=999 not found
+2026-06-05 01:32:09,869 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'greater_than', 'loc': ('body', 'user_id'), 'msg': 'Input should be greater than 0', 'input': 0, 'ctx': {'gt': 0}}]
+2026-06-05 01:32:09,965 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'greater_than', 'loc': ('body', 'user_id'), 'msg': 'Input should be greater than 0', 'input': -5, 'ctx': {'gt': 0}}]
+2026-06-05 01:32:10,058 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'int_parsing', 'loc': ('body', 'user_id'), 'msg': 'Input should be a valid integer, unable to parse string as an integer', 'input': 'abc'}]
+2026-06-05 01:32:10,154 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'missing', 'loc': ('body', 'user_id'), 'msg': 'Field required', 'input': {}}]
+2026-06-05 01:32:10,248 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'less_than_equal', 'loc': ('body', 'user_id'), 'msg': 'Input should be less than or equal to 9223372036854775807', 'input': 99999999999999999999, 'ctx': {'le': 9223372036854775807}}]
+2026-06-05 01:32:10,341 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'int_from_float', 'loc': ('body', 'user_id'), 'msg': 'Input should be a valid integer, got a number with a fractional part', 'input': 1.5}]
+2026-06-05 01:32:27,572 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=2 | variant_id=1 | quantity=2
+2026-06-05 01:32:27,575 INFO [cart.addItem:102] [addItem] | status_code=201 | event=item_added | cart_id=2 | item_id=2 | quantity=2
+2026-06-05 01:32:27,737 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=2 | variant_id=1 | quantity=3
+2026-06-05 01:32:27,740 INFO [cart.addItem:102] [addItem] | status_code=201 | event=item_added | cart_id=2 | item_id=2 | quantity=5
+2026-06-05 01:32:27,831 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=2 | variant_id=4 | quantity=1
+2026-06-05 01:32:27,834 INFO [cart.addItem:102] [addItem] | status_code=201 | event=item_added | cart_id=2 | item_id=3 | quantity=1
+2026-06-05 01:32:27,911 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=2 | variant_id=7 | quantity=5
+2026-06-05 01:32:27,915 INFO [cart.addItem:102] [addItem] | status_code=201 | event=item_added | cart_id=2 | item_id=4 | quantity=5
+2026-06-05 01:32:28,023 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=9999 | variant_id=1 | quantity=1
+2026-06-05 01:32:28,023 WARNING [cart.addItem:116] [addItem] | status_code=404 | error=CART_NOT_FOUND | cart_id=9999 | cause=Cart with id=9999 not found
+2026-06-05 01:32:28,125 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=2 | variant_id=9999 | quantity=1
+2026-06-05 01:32:28,125 WARNING [cart.addItem:128] [addItem] | status_code=404 | error=VARIANT_NOT_FOUND | cart_id=2 | variant_id=9999 | cause=Product variant with id=9999 not found
+2026-06-05 01:32:28,221 INFO [cart.createCart:47] [createCart] | event=request_received | user_id=3
+2026-06-05 01:32:28,224 INFO [cart.createCart:52] [createCart] | status_code=201 | event=cart_created | cart_id=4 | user_id=3
+2026-06-05 01:32:28,332 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=4 | variant_id=2 | quantity=1
+2026-06-05 01:32:28,335 INFO [cart.addItem:102] [addItem] | status_code=201 | event=item_added | cart_id=4 | item_id=5 | quantity=1
+2026-06-05 01:32:28,409 INFO [cart.checkout:237] [checkout] | event=request_received | cart_id=4
+2026-06-05 01:32:28,415 INFO [cart.checkout:242] [checkout] | status_code=200 | event=checkout_success | cart_id=4
+2026-06-05 01:32:28,488 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=4 | variant_id=3 | quantity=1
+2026-06-05 01:32:28,489 WARNING [cart.addItem:122] [addItem] | status_code=409 | error=CART_CHECKED_OUT | cart_id=4 | cause=Cart id=4 is already checked out, cannot add items
+2026-06-05 01:32:28,583 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=2 | variant_id=6 | quantity=100
+2026-06-05 01:32:28,583 WARNING [cart.addItem:135] [addItem] | status_code=422 | error=INSUFFICIENT_STOCK | cart_id=2 | variant_id=6 | quantity=100 | cause=Requested quantity=100 exceeds available stock=10 for variant_id=6
+2026-06-05 01:32:28,687 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=2 | variant_id=5 | quantity=7
+2026-06-05 01:32:28,690 INFO [cart.addItem:102] [addItem] | status_code=201 | event=item_added | cart_id=2 | item_id=6 | quantity=7
+2026-06-05 01:32:28,785 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=2 | variant_id=5 | quantity=5
+2026-06-05 01:32:28,788 INFO [cart.addItem:102] [addItem] | status_code=201 | event=item_added | cart_id=2 | item_id=6 | quantity=12
+2026-06-05 01:32:28,897 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/2/items | fields=['quantity'] | raw=[{'type': 'greater_than', 'loc': ('body', 'quantity'), 'msg': 'Input should be greater than 0', 'input': 0, 'ctx': {'gt': 0}}]
+2026-06-05 01:32:28,991 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/2/items | fields=['quantity'] | raw=[{'type': 'greater_than', 'loc': ('body', 'quantity'), 'msg': 'Input should be greater than 0', 'input': -3, 'ctx': {'gt': 0}}]
+2026-06-05 01:32:29,088 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/2/items | fields=['variant_id'] | raw=[{'type': 'greater_than', 'loc': ('body', 'variant_id'), 'msg': 'Input should be greater than 0', 'input': 0, 'ctx': {'gt': 0}}]
+2026-06-05 01:32:29,180 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/2/items | fields=['variant_id'] | raw=[{'type': 'greater_than', 'loc': ('body', 'variant_id'), 'msg': 'Input should be greater than 0', 'input': -1, 'ctx': {'gt': 0}}]
+2026-06-05 01:32:29,258 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/2/items | fields=['variant_id'] | raw=[{'type': 'missing', 'loc': ('body', 'variant_id'), 'msg': 'Field required', 'input': {'quantity': 2}}]
+2026-06-05 01:32:29,338 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/2/items | fields=['quantity'] | raw=[{'type': 'missing', 'loc': ('body', 'quantity'), 'msg': 'Field required', 'input': {'variant_id': 1}}]
+2026-06-05 01:35:02,053 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=2 | variant_id=5 | quantity=5
+2026-06-05 01:35:02,053 WARNING [cart.addItem:135] [addItem] | status_code=422 | error=INSUFFICIENT_STOCK | cart_id=2 | variant_id=5 | quantity=5 | cause=Requested total quantity=17 exceeds available stock=12 for variant_id=5
+2026-06-05 01:35:34,983 INFO [cart.createCart:47] [createCart] | event=request_received | user_id=1
+2026-06-05 01:35:34,986 INFO [cart.createCart:52] [createCart] | status_code=201 | event=cart_created | cart_id=1 | user_id=1
+2026-06-05 01:35:35,144 INFO [cart.createCart:47] [createCart] | event=request_received | user_id=2
+2026-06-05 01:35:35,149 INFO [cart.createCart:52] [createCart] | status_code=201 | event=cart_created | cart_id=2 | user_id=2
+2026-06-05 01:35:35,238 INFO [cart.createCart:47] [createCart] | event=request_received | user_id=1
+2026-06-05 01:35:35,238 WARNING [cart.createCart:71] [createCart] | status_code=409 | error=CART_ALREADY_EXISTS | user_id=1 | cause=User id=1 already has an active cart (cart_id=1)
+2026-06-05 01:35:35,317 INFO [cart.createCart:47] [createCart] | event=request_received | user_id=999
+2026-06-05 01:35:35,317 WARNING [cart.createCart:64] [createCart] | status_code=404 | error=USER_NOT_FOUND | user_id=999 | cause=User with id=999 not found
+2026-06-05 01:35:35,414 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'greater_than', 'loc': ('body', 'user_id'), 'msg': 'Input should be greater than 0', 'input': 0, 'ctx': {'gt': 0}}]
+2026-06-05 01:35:35,508 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'greater_than', 'loc': ('body', 'user_id'), 'msg': 'Input should be greater than 0', 'input': -5, 'ctx': {'gt': 0}}]
+2026-06-05 01:35:35,568 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'int_parsing', 'loc': ('body', 'user_id'), 'msg': 'Input should be a valid integer, unable to parse string as an integer', 'input': 'abc'}]
+2026-06-05 01:35:35,662 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'missing', 'loc': ('body', 'user_id'), 'msg': 'Field required', 'input': {}}]
+2026-06-05 01:35:35,753 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'less_than_equal', 'loc': ('body', 'user_id'), 'msg': 'Input should be less than or equal to 9223372036854775807', 'input': 99999999999999999999, 'ctx': {'le': 9223372036854775807}}]
+2026-06-05 01:35:35,831 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'int_from_float', 'loc': ('body', 'user_id'), 'msg': 'Input should be a valid integer, got a number with a fractional part', 'input': 1.5}]
+2026-06-05 01:35:51,737 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=1 | variant_id=1 | quantity=2
+2026-06-05 01:35:51,741 INFO [cart.addItem:102] [addItem] | status_code=201 | event=item_added | cart_id=1 | item_id=1 | quantity=2
+2026-06-05 01:35:51,863 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=1 | variant_id=1 | quantity=3
+2026-06-05 01:35:51,866 INFO [cart.addItem:102] [addItem] | status_code=201 | event=item_added | cart_id=1 | item_id=1 | quantity=5
+2026-06-05 01:35:51,956 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=1 | variant_id=4 | quantity=1
+2026-06-05 01:35:51,959 INFO [cart.addItem:102] [addItem] | status_code=201 | event=item_added | cart_id=1 | item_id=2 | quantity=1
+2026-06-05 01:35:52,035 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=1 | variant_id=7 | quantity=5
+2026-06-05 01:35:52,039 INFO [cart.addItem:102] [addItem] | status_code=201 | event=item_added | cart_id=1 | item_id=3 | quantity=5
+2026-06-05 01:35:52,127 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=9999 | variant_id=1 | quantity=1
+2026-06-05 01:35:52,128 WARNING [cart.addItem:116] [addItem] | status_code=404 | error=CART_NOT_FOUND | cart_id=9999 | cause=Cart with id=9999 not found
+2026-06-05 01:35:52,223 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=1 | variant_id=9999 | quantity=1
+2026-06-05 01:35:52,224 WARNING [cart.addItem:128] [addItem] | status_code=404 | error=VARIANT_NOT_FOUND | cart_id=1 | variant_id=9999 | cause=Product variant with id=9999 not found
+2026-06-05 01:35:52,300 INFO [cart.createCart:47] [createCart] | event=request_received | user_id=3
+2026-06-05 01:35:52,303 INFO [cart.createCart:52] [createCart] | status_code=201 | event=cart_created | cart_id=3 | user_id=3
+2026-06-05 01:35:52,395 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=3 | variant_id=2 | quantity=1
+2026-06-05 01:35:52,399 INFO [cart.addItem:102] [addItem] | status_code=201 | event=item_added | cart_id=3 | item_id=4 | quantity=1
+2026-06-05 01:35:52,491 INFO [cart.checkout:237] [checkout] | event=request_received | cart_id=3
+2026-06-05 01:35:52,494 INFO [cart.checkout:242] [checkout] | status_code=200 | event=checkout_success | cart_id=3
+2026-06-05 01:35:52,583 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=3 | variant_id=3 | quantity=1
+2026-06-05 01:35:52,583 WARNING [cart.addItem:122] [addItem] | status_code=409 | error=CART_CHECKED_OUT | cart_id=3 | cause=Cart id=3 is already checked out, cannot add items
+2026-06-05 01:35:52,676 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=1 | variant_id=6 | quantity=100
+2026-06-05 01:35:52,676 WARNING [cart.addItem:135] [addItem] | status_code=422 | error=INSUFFICIENT_STOCK | cart_id=1 | variant_id=6 | quantity=100 | cause=Requested quantity=100 exceeds available stock=10 for variant_id=6
+2026-06-05 01:35:52,771 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=1 | variant_id=5 | quantity=7
+2026-06-05 01:35:52,775 INFO [cart.addItem:102] [addItem] | status_code=201 | event=item_added | cart_id=1 | item_id=5 | quantity=7
+2026-06-05 01:35:52,865 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=1 | variant_id=5 | quantity=6
+2026-06-05 01:35:52,866 WARNING [cart.addItem:135] [addItem] | status_code=422 | error=INSUFFICIENT_STOCK | cart_id=1 | variant_id=5 | quantity=6 | cause=Requested total quantity=13 exceeds available stock=12 for variant_id=5
+2026-06-05 01:35:52,959 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/1/items | fields=['quantity'] | raw=[{'type': 'greater_than', 'loc': ('body', 'quantity'), 'msg': 'Input should be greater than 0', 'input': 0, 'ctx': {'gt': 0}}]
+2026-06-05 01:35:53,054 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/1/items | fields=['quantity'] | raw=[{'type': 'greater_than', 'loc': ('body', 'quantity'), 'msg': 'Input should be greater than 0', 'input': -3, 'ctx': {'gt': 0}}]
+2026-06-05 01:35:53,132 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/1/items | fields=['variant_id'] | raw=[{'type': 'greater_than', 'loc': ('body', 'variant_id'), 'msg': 'Input should be greater than 0', 'input': 0, 'ctx': {'gt': 0}}]
+2026-06-05 01:35:53,226 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/1/items | fields=['variant_id'] | raw=[{'type': 'greater_than', 'loc': ('body', 'variant_id'), 'msg': 'Input should be greater than 0', 'input': -1, 'ctx': {'gt': 0}}]
+2026-06-05 01:35:53,320 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/1/items | fields=['variant_id'] | raw=[{'type': 'missing', 'loc': ('body', 'variant_id'), 'msg': 'Field required', 'input': {'quantity': 2}}]
+2026-06-05 01:35:53,395 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/1/items | fields=['quantity'] | raw=[{'type': 'missing', 'loc': ('body', 'quantity'), 'msg': 'Field required', 'input': {'variant_id': 1}}]
+2026-06-05 01:36:11,280 INFO [cart.removeItem:157] [removeItem] | event=request_received | cart_id=1 | item_id=2
+2026-06-05 01:36:11,283 INFO [cart.removeItem:164] [removeItem] | status_code=200 | event=item_removed | cart_id=1 | item_id=2
+2026-06-05 01:36:11,440 INFO [cart.removeItem:157] [removeItem] | event=request_received | cart_id=9999 | item_id=1
+2026-06-05 01:36:11,440 WARNING [cart.removeItem:171] [removeItem] | status_code=404 | error=CART_NOT_FOUND | cart_id=9999 | cause=Cart with id=9999 not found
+2026-06-05 01:36:11,532 INFO [cart.removeItem:157] [removeItem] | event=request_received | cart_id=1 | item_id=9999
+2026-06-05 01:36:11,532 WARNING [cart.removeItem:183] [removeItem] | status_code=404 | error=ITEM_NOT_FOUND | cart_id=1 | item_id=9999 | cause=Item id=9999 not found in cart id=1
+2026-06-05 01:36:11,628 INFO [cart.removeItem:157] [removeItem] | event=request_received | cart_id=2 | item_id=1
+2026-06-05 01:36:11,629 WARNING [cart.removeItem:183] [removeItem] | status_code=404 | error=ITEM_NOT_FOUND | cart_id=2 | item_id=1 | cause=Item id=1 not found in cart id=2
+2026-06-05 01:36:11,721 INFO [cart.removeItem:157] [removeItem] | event=request_received | cart_id=3 | item_id=4
+2026-06-05 01:36:11,722 WARNING [cart.removeItem:177] [removeItem] | status_code=409 | error=CART_CHECKED_OUT | cart_id=3 | cause=Cart id=3 is already checked out, cannot remove items
+2026-06-05 01:36:11,815 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=DELETE | path=/carts/0/items/1 | fields=['cart_id'] | raw=[{'type': 'greater_than', 'loc': ('path', 'cart_id'), 'msg': 'Input should be greater than 0', 'input': '0', 'ctx': {'gt': 0}}]
+2026-06-05 01:36:11,876 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=DELETE | path=/carts/1/items/0 | fields=['item_id'] | raw=[{'type': 'greater_than', 'loc': ('path', 'item_id'), 'msg': 'Input should be greater than 0', 'input': '0', 'ctx': {'gt': 0}}]
+2026-06-05 01:36:11,958 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=DELETE | path=/carts/99999999999999999999/items/1 | fields=['cart_id'] | raw=[{'type': 'less_than_equal', 'loc': ('path', 'cart_id'), 'msg': 'Input should be less than or equal to 9223372036854775807', 'input': '99999999999999999999', 'ctx': {'le': 9223372036854775807}}]
+2026-06-05 01:36:29,896 INFO [cart.deleteCart:206] [deleteCart] | event=request_received | cart_id=2
+2026-06-05 01:36:29,899 INFO [cart.deleteCart:211] [deleteCart] | status_code=200 | event=cart_deleted | cart_id=2
+2026-06-05 01:36:30,061 INFO [cart.createCart:47] [createCart] | event=request_received | user_id=2
+2026-06-05 01:36:30,064 INFO [cart.createCart:52] [createCart] | status_code=201 | event=cart_created | cart_id=4 | user_id=2
+2026-06-05 01:36:30,152 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=4 | variant_id=3 | quantity=2
+2026-06-05 01:36:30,155 INFO [cart.addItem:102] [addItem] | status_code=201 | event=item_added | cart_id=4 | item_id=6 | quantity=2
+2026-06-05 01:36:30,215 INFO [cart.deleteCart:206] [deleteCart] | event=request_received | cart_id=4
+2026-06-05 01:36:30,218 INFO [cart.deleteCart:211] [deleteCart] | status_code=200 | event=cart_deleted | cart_id=4
+2026-06-05 01:36:30,311 INFO [cart.deleteCart:206] [deleteCart] | event=request_received | cart_id=9999
+2026-06-05 01:36:30,312 WARNING [cart.deleteCart:216] [deleteCart] | status_code=404 | error=CART_NOT_FOUND | cart_id=9999 | cause=Cart with id=9999 not found
+2026-06-05 01:36:30,402 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=DELETE | path=/carts/0 | fields=['cart_id'] | raw=[{'type': 'greater_than', 'loc': ('path', 'cart_id'), 'msg': 'Input should be greater than 0', 'input': '0', 'ctx': {'gt': 0}}]
+2026-06-05 01:36:30,478 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=DELETE | path=/carts/-1 | fields=['cart_id'] | raw=[{'type': 'greater_than', 'loc': ('path', 'cart_id'), 'msg': 'Input should be greater than 0', 'input': '-1', 'ctx': {'gt': 0}}]
+2026-06-05 01:36:30,571 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=DELETE | path=/carts/99999999999999999999 | fields=['cart_id'] | raw=[{'type': 'less_than_equal', 'loc': ('path', 'cart_id'), 'msg': 'Input should be less than or equal to 9223372036854775807', 'input': '99999999999999999999', 'ctx': {'le': 9223372036854775807}}]
+2026-06-05 01:36:30,665 INFO [cart.deleteCart:206] [deleteCart] | event=request_received | cart_id=3
+2026-06-05 01:36:30,667 INFO [cart.deleteCart:211] [deleteCart] | status_code=200 | event=cart_deleted | cart_id=3
+2026-06-05 01:36:45,383 INFO [cart.checkout:237] [checkout] | event=request_received | cart_id=1
+2026-06-05 01:36:45,390 INFO [cart.checkout:242] [checkout] | status_code=200 | event=checkout_success | cart_id=1
+2026-06-05 01:36:45,545 INFO [cart.createCart:47] [createCart] | event=request_received | user_id=1
+2026-06-05 01:36:45,549 INFO [cart.createCart:52] [createCart] | status_code=201 | event=cart_created | cart_id=5 | user_id=1
+2026-06-05 01:36:45,638 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=5 | variant_id=7 | quantity=1
+2026-06-05 01:36:45,641 INFO [cart.addItem:102] [addItem] | status_code=201 | event=item_added | cart_id=5 | item_id=7 | quantity=1
+2026-06-05 01:36:45,734 INFO [cart.checkout:237] [checkout] | event=request_received | cart_id=9999
+2026-06-05 01:36:45,734 WARNING [cart.checkout:251] [checkout] | status_code=404 | error=CART_NOT_FOUND | cart_id=9999 | cause=Cart with id=9999 not found
+2026-06-05 01:36:45,827 INFO [cart.checkout:237] [checkout] | event=request_received | cart_id=1
+2026-06-05 01:36:45,827 WARNING [cart.checkout:257] [checkout] | status_code=409 | error=CART_CHECKED_OUT | cart_id=1 | cause=Cart id=1 is already checked out
+2026-06-05 01:36:45,921 INFO [cart.createCart:47] [createCart] | event=request_received | user_id=2
+2026-06-05 01:36:45,923 INFO [cart.createCart:52] [createCart] | status_code=201 | event=cart_created | cart_id=6 | user_id=2
+2026-06-05 01:36:46,000 INFO [cart.checkout:237] [checkout] | event=request_received | cart_id=6
+2026-06-05 01:36:46,001 WARNING [cart.checkout:263] [checkout] | status_code=422 | error=CART_EMPTY | cart_id=6 | cause=Cart id=6 has no items, cannot checkout
+2026-06-05 01:36:46,093 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/0/checkout | fields=['cart_id'] | raw=[{'type': 'greater_than', 'loc': ('path', 'cart_id'), 'msg': 'Input should be greater than 0', 'input': '0', 'ctx': {'gt': 0}}]
+2026-06-05 01:36:46,186 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/99999999999999999999/checkout | fields=['cart_id'] | raw=[{'type': 'less_than_equal', 'loc': ('path', 'cart_id'), 'msg': 'Input should be less than or equal to 9223372036854775807', 'input': '99999999999999999999', 'ctx': {'le': 9223372036854775807}}]
+2026-06-05 01:39:25,615 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/null/items | fields=['cart_id'] | raw=[{'type': 'int_parsing', 'loc': ('path', 'cart_id'), 'msg': 'Input should be a valid integer, unable to parse string as an integer', 'input': 'null'}]
+2026-06-05 01:39:59,305 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/null/items | fields=['cart_id'] | raw=[{'type': 'int_parsing', 'loc': ('path', 'cart_id'), 'msg': 'Input should be a valid integer, unable to parse string as an integer', 'input': 'null'}]
+2026-06-05 01:41:27,231 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/null/items | fields=['cart_id'] | raw=[{'type': 'int_parsing', 'loc': ('path', 'cart_id'), 'msg': 'Input should be a valid integer, unable to parse string as an integer', 'input': 'null'}]
+2026-06-05 01:41:53,292 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=1 | variant_id=7 | quantity=5
+2026-06-05 01:41:53,293 WARNING [cart.addItem:122] [addItem] | status_code=409 | error=CART_CHECKED_OUT | cart_id=1 | cause=Cart id=1 is already checked out, cannot add items
+2026-06-05 01:42:17,813 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/null/items | fields=['cart_id'] | raw=[{'type': 'int_parsing', 'loc': ('path', 'cart_id'), 'msg': 'Input should be a valid integer, unable to parse string as an integer', 'input': 'null'}]
+2026-06-05 01:43:10,151 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/null/items | fields=['cart_id'] | raw=[{'type': 'int_parsing', 'loc': ('path', 'cart_id'), 'msg': 'Input should be a valid integer, unable to parse string as an integer', 'input': 'null'}]
+2026-06-05 01:44:05,980 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=5 | variant_id=7 | quantity=5
+2026-06-05 01:44:05,980 WARNING [cart.addItem:135] [addItem] | status_code=422 | error=INSUFFICIENT_STOCK | cart_id=5 | variant_id=7 | quantity=5 | cause=Requested total quantity=6 exceeds available stock=3 for variant_id=7
+2026-06-05 01:45:41,853 INFO [cart.createCart:47] [createCart] | event=request_received | user_id=1
+2026-06-05 01:45:41,857 INFO [cart.createCart:52] [createCart] | status_code=201 | event=cart_created | cart_id=1 | user_id=1
+2026-06-05 01:45:42,014 INFO [cart.createCart:47] [createCart] | event=request_received | user_id=2
+2026-06-05 01:45:42,017 INFO [cart.createCart:52] [createCart] | status_code=201 | event=cart_created | cart_id=2 | user_id=2
+2026-06-05 01:45:42,092 INFO [cart.createCart:47] [createCart] | event=request_received | user_id=1
+2026-06-05 01:45:42,092 WARNING [cart.createCart:71] [createCart] | status_code=409 | error=CART_ALREADY_EXISTS | user_id=1 | cause=User id=1 already has an active cart (cart_id=1)
+2026-06-05 01:45:42,170 INFO [cart.createCart:47] [createCart] | event=request_received | user_id=999
+2026-06-05 01:45:42,171 WARNING [cart.createCart:64] [createCart] | status_code=404 | error=USER_NOT_FOUND | user_id=999 | cause=User with id=999 not found
+2026-06-05 01:45:42,267 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'greater_than', 'loc': ('body', 'user_id'), 'msg': 'Input should be greater than 0', 'input': 0, 'ctx': {'gt': 0}}]
+2026-06-05 01:45:42,359 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'greater_than', 'loc': ('body', 'user_id'), 'msg': 'Input should be greater than 0', 'input': -5, 'ctx': {'gt': 0}}]
+2026-06-05 01:45:42,441 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'int_parsing', 'loc': ('body', 'user_id'), 'msg': 'Input should be a valid integer, unable to parse string as an integer', 'input': 'abc'}]
+2026-06-05 01:45:42,518 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'missing', 'loc': ('body', 'user_id'), 'msg': 'Field required', 'input': {}}]
+2026-06-05 01:45:42,597 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'less_than_equal', 'loc': ('body', 'user_id'), 'msg': 'Input should be less than or equal to 9223372036854775807', 'input': 99999999999999999999, 'ctx': {'le': 9223372036854775807}}]
+2026-06-05 01:45:42,689 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'int_from_float', 'loc': ('body', 'user_id'), 'msg': 'Input should be a valid integer, got a number with a fractional part', 'input': 1.5}]
+2026-06-05 01:45:42,782 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=1 | variant_id=1 | quantity=2
+2026-06-05 01:45:42,785 INFO [cart.addItem:102] [addItem] | status_code=201 | event=item_added | cart_id=1 | item_id=1 | quantity=2
+2026-06-05 01:45:42,877 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=1 | variant_id=1 | quantity=3
+2026-06-05 01:45:42,879 INFO [cart.addItem:102] [addItem] | status_code=201 | event=item_added | cart_id=1 | item_id=1 | quantity=5
+2026-06-05 01:45:42,940 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=1 | variant_id=4 | quantity=1
+2026-06-05 01:45:42,944 INFO [cart.addItem:102] [addItem] | status_code=201 | event=item_added | cart_id=1 | item_id=2 | quantity=1
+2026-06-05 01:45:43,017 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=1 | variant_id=7 | quantity=5
+2026-06-05 01:45:43,020 INFO [cart.addItem:102] [addItem] | status_code=201 | event=item_added | cart_id=1 | item_id=3 | quantity=5
+2026-06-05 01:45:43,109 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=9999 | variant_id=1 | quantity=1
+2026-06-05 01:45:43,109 WARNING [cart.addItem:116] [addItem] | status_code=404 | error=CART_NOT_FOUND | cart_id=9999 | cause=Cart with id=9999 not found
+2026-06-05 01:45:43,190 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=1 | variant_id=9999 | quantity=1
+2026-06-05 01:45:43,190 WARNING [cart.addItem:128] [addItem] | status_code=404 | error=VARIANT_NOT_FOUND | cart_id=1 | variant_id=9999 | cause=Product variant with id=9999 not found
+2026-06-05 01:45:43,282 INFO [cart.createCart:47] [createCart] | event=request_received | user_id=3
+2026-06-05 01:45:43,285 INFO [cart.createCart:52] [createCart] | status_code=201 | event=cart_created | cart_id=3 | user_id=3
+2026-06-05 01:45:43,361 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=3 | variant_id=2 | quantity=1
+2026-06-05 01:45:43,364 INFO [cart.addItem:102] [addItem] | status_code=201 | event=item_added | cart_id=3 | item_id=4 | quantity=1
+2026-06-05 01:45:43,438 INFO [cart.checkout:237] [checkout] | event=request_received | cart_id=3
+2026-06-05 01:45:43,443 INFO [cart.checkout:242] [checkout] | status_code=200 | event=checkout_success | cart_id=3
+2026-06-05 01:45:43,563 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=3 | variant_id=3 | quantity=1
+2026-06-05 01:45:43,563 WARNING [cart.addItem:122] [addItem] | status_code=409 | error=CART_CHECKED_OUT | cart_id=3 | cause=Cart id=3 is already checked out, cannot add items
+2026-06-05 01:45:43,660 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=1 | variant_id=6 | quantity=100
+2026-06-05 01:45:43,660 WARNING [cart.addItem:135] [addItem] | status_code=422 | error=INSUFFICIENT_STOCK | cart_id=1 | variant_id=6 | quantity=100 | cause=Requested quantity=100 exceeds available stock=10 for variant_id=6
+2026-06-05 01:45:43,738 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=1 | variant_id=5 | quantity=7
+2026-06-05 01:45:43,741 INFO [cart.addItem:102] [addItem] | status_code=201 | event=item_added | cart_id=1 | item_id=5 | quantity=7
+2026-06-05 01:45:43,831 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=1 | variant_id=5 | quantity=6
+2026-06-05 01:45:43,833 WARNING [cart.addItem:135] [addItem] | status_code=422 | error=INSUFFICIENT_STOCK | cart_id=1 | variant_id=5 | quantity=6 | cause=Requested total quantity=13 exceeds available stock=12 for variant_id=5
+2026-06-05 01:45:43,912 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/1/items | fields=['quantity'] | raw=[{'type': 'greater_than', 'loc': ('body', 'quantity'), 'msg': 'Input should be greater than 0', 'input': 0, 'ctx': {'gt': 0}}]
+2026-06-05 01:45:43,989 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/1/items | fields=['quantity'] | raw=[{'type': 'greater_than', 'loc': ('body', 'quantity'), 'msg': 'Input should be greater than 0', 'input': -3, 'ctx': {'gt': 0}}]
+2026-06-05 01:45:44,066 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/1/items | fields=['variant_id'] | raw=[{'type': 'greater_than', 'loc': ('body', 'variant_id'), 'msg': 'Input should be greater than 0', 'input': 0, 'ctx': {'gt': 0}}]
+2026-06-05 01:45:44,159 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/1/items | fields=['variant_id'] | raw=[{'type': 'greater_than', 'loc': ('body', 'variant_id'), 'msg': 'Input should be greater than 0', 'input': -1, 'ctx': {'gt': 0}}]
+2026-06-05 01:45:44,252 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/1/items | fields=['variant_id'] | raw=[{'type': 'missing', 'loc': ('body', 'variant_id'), 'msg': 'Field required', 'input': {'quantity': 2}}]
+2026-06-05 01:45:44,348 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/1/items | fields=['quantity'] | raw=[{'type': 'missing', 'loc': ('body', 'quantity'), 'msg': 'Field required', 'input': {'variant_id': 1}}]
+2026-06-05 01:45:44,440 INFO [cart.removeItem:157] [removeItem] | event=request_received | cart_id=1 | item_id=2
+2026-06-05 01:45:44,445 INFO [cart.removeItem:164] [removeItem] | status_code=200 | event=item_removed | cart_id=1 | item_id=2
+2026-06-05 01:45:44,536 INFO [cart.removeItem:157] [removeItem] | event=request_received | cart_id=9999 | item_id=1
+2026-06-05 01:45:44,536 WARNING [cart.removeItem:171] [removeItem] | status_code=404 | error=CART_NOT_FOUND | cart_id=9999 | cause=Cart with id=9999 not found
+2026-06-05 01:45:44,616 INFO [cart.removeItem:157] [removeItem] | event=request_received | cart_id=1 | item_id=9999
+2026-06-05 01:45:44,616 WARNING [cart.removeItem:183] [removeItem] | status_code=404 | error=ITEM_NOT_FOUND | cart_id=1 | item_id=9999 | cause=Item id=9999 not found in cart id=1
+2026-06-05 01:45:44,691 INFO [cart.removeItem:157] [removeItem] | event=request_received | cart_id=2 | item_id=1
+2026-06-05 01:45:44,691 WARNING [cart.removeItem:183] [removeItem] | status_code=404 | error=ITEM_NOT_FOUND | cart_id=2 | item_id=1 | cause=Item id=1 not found in cart id=2
+2026-06-05 01:45:44,770 INFO [cart.removeItem:157] [removeItem] | event=request_received | cart_id=3 | item_id=4
+2026-06-05 01:45:44,771 WARNING [cart.removeItem:177] [removeItem] | status_code=409 | error=CART_CHECKED_OUT | cart_id=3 | cause=Cart id=3 is already checked out, cannot remove items
+2026-06-05 01:45:44,864 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=DELETE | path=/carts/0/items/1 | fields=['cart_id'] | raw=[{'type': 'greater_than', 'loc': ('path', 'cart_id'), 'msg': 'Input should be greater than 0', 'input': '0', 'ctx': {'gt': 0}}]
+2026-06-05 01:45:44,959 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=DELETE | path=/carts/1/items/0 | fields=['item_id'] | raw=[{'type': 'greater_than', 'loc': ('path', 'item_id'), 'msg': 'Input should be greater than 0', 'input': '0', 'ctx': {'gt': 0}}]
+2026-06-05 01:45:45,035 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=DELETE | path=/carts/99999999999999999999/items/1 | fields=['cart_id'] | raw=[{'type': 'less_than_equal', 'loc': ('path', 'cart_id'), 'msg': 'Input should be less than or equal to 9223372036854775807', 'input': '99999999999999999999', 'ctx': {'le': 9223372036854775807}}]
+2026-06-05 01:45:45,130 INFO [cart.deleteCart:206] [deleteCart] | event=request_received | cart_id=2
+2026-06-05 01:45:45,134 INFO [cart.deleteCart:211] [deleteCart] | status_code=200 | event=cart_deleted | cart_id=2
+2026-06-05 01:45:45,224 INFO [cart.createCart:47] [createCart] | event=request_received | user_id=2
+2026-06-05 01:45:45,227 INFO [cart.createCart:52] [createCart] | status_code=201 | event=cart_created | cart_id=4 | user_id=2
+2026-06-05 01:45:45,306 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=4 | variant_id=3 | quantity=2
+2026-06-05 01:45:45,308 INFO [cart.addItem:102] [addItem] | status_code=201 | event=item_added | cart_id=4 | item_id=6 | quantity=2
+2026-06-05 01:45:45,413 INFO [cart.deleteCart:206] [deleteCart] | event=request_received | cart_id=4
+2026-06-05 01:45:45,416 INFO [cart.deleteCart:211] [deleteCart] | status_code=200 | event=cart_deleted | cart_id=4
+2026-06-05 01:45:45,508 INFO [cart.deleteCart:206] [deleteCart] | event=request_received | cart_id=9999
+2026-06-05 01:45:45,508 WARNING [cart.deleteCart:216] [deleteCart] | status_code=404 | error=CART_NOT_FOUND | cart_id=9999 | cause=Cart with id=9999 not found
+2026-06-05 01:45:45,587 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=DELETE | path=/carts/0 | fields=['cart_id'] | raw=[{'type': 'greater_than', 'loc': ('path', 'cart_id'), 'msg': 'Input should be greater than 0', 'input': '0', 'ctx': {'gt': 0}}]
+2026-06-05 01:45:45,683 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=DELETE | path=/carts/-1 | fields=['cart_id'] | raw=[{'type': 'greater_than', 'loc': ('path', 'cart_id'), 'msg': 'Input should be greater than 0', 'input': '-1', 'ctx': {'gt': 0}}]
+2026-06-05 01:45:45,774 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=DELETE | path=/carts/99999999999999999999 | fields=['cart_id'] | raw=[{'type': 'less_than_equal', 'loc': ('path', 'cart_id'), 'msg': 'Input should be less than or equal to 9223372036854775807', 'input': '99999999999999999999', 'ctx': {'le': 9223372036854775807}}]
+2026-06-05 01:45:45,853 INFO [cart.deleteCart:206] [deleteCart] | event=request_received | cart_id=3
+2026-06-05 01:45:45,855 INFO [cart.deleteCart:211] [deleteCart] | status_code=200 | event=cart_deleted | cart_id=3
+2026-06-05 01:45:45,947 INFO [cart.checkout:237] [checkout] | event=request_received | cart_id=1
+2026-06-05 01:45:45,953 INFO [cart.checkout:242] [checkout] | status_code=200 | event=checkout_success | cart_id=1
+2026-06-05 01:45:46,055 INFO [cart.createCart:47] [createCart] | event=request_received | user_id=1
+2026-06-05 01:45:46,059 INFO [cart.createCart:52] [createCart] | status_code=201 | event=cart_created | cart_id=5 | user_id=1
+2026-06-05 01:45:46,137 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=5 | variant_id=7 | quantity=1
+2026-06-05 01:45:46,140 INFO [cart.addItem:102] [addItem] | status_code=201 | event=item_added | cart_id=5 | item_id=7 | quantity=1
+2026-06-05 01:45:46,229 INFO [cart.checkout:237] [checkout] | event=request_received | cart_id=9999
+2026-06-05 01:45:46,229 WARNING [cart.checkout:251] [checkout] | status_code=404 | error=CART_NOT_FOUND | cart_id=9999 | cause=Cart with id=9999 not found
+2026-06-05 01:45:46,321 INFO [cart.checkout:237] [checkout] | event=request_received | cart_id=1
+2026-06-05 01:45:46,321 WARNING [cart.checkout:257] [checkout] | status_code=409 | error=CART_CHECKED_OUT | cart_id=1 | cause=Cart id=1 is already checked out
+2026-06-05 01:45:46,399 INFO [cart.createCart:47] [createCart] | event=request_received | user_id=2
+2026-06-05 01:45:46,402 INFO [cart.createCart:52] [createCart] | status_code=201 | event=cart_created | cart_id=6 | user_id=2
+2026-06-05 01:45:46,493 INFO [cart.checkout:237] [checkout] | event=request_received | cart_id=6
+2026-06-05 01:45:46,493 WARNING [cart.checkout:263] [checkout] | status_code=422 | error=CART_EMPTY | cart_id=6 | cause=Cart id=6 has no items, cannot checkout
+2026-06-05 01:45:46,572 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/0/checkout | fields=['cart_id'] | raw=[{'type': 'greater_than', 'loc': ('path', 'cart_id'), 'msg': 'Input should be greater than 0', 'input': '0', 'ctx': {'gt': 0}}]
+2026-06-05 01:45:46,648 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/99999999999999999999/checkout | fields=['cart_id'] | raw=[{'type': 'less_than_equal', 'loc': ('path', 'cart_id'), 'msg': 'Input should be less than or equal to 9223372036854775807', 'input': '99999999999999999999', 'ctx': {'le': 9223372036854775807}}]
+2026-06-05 01:45:46,743 INFO [cart.createCart:47] [createCart] | event=request_received | user_id=3
+2026-06-05 01:45:46,746 INFO [cart.createCart:52] [createCart] | status_code=201 | event=cart_created | cart_id=7 | user_id=3
+2026-06-05 01:45:46,835 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=7 | variant_id=1 | quantity=2
+2026-06-05 01:45:46,837 INFO [cart.addItem:102] [addItem] | status_code=201 | event=item_added | cart_id=7 | item_id=8 | quantity=2
+2026-06-05 01:45:46,915 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=7 | variant_id=4 | quantity=1
+2026-06-05 01:45:46,921 INFO [cart.addItem:102] [addItem] | status_code=201 | event=item_added | cart_id=7 | item_id=9 | quantity=1
+2026-06-05 01:45:47,023 INFO [cart.removeItem:157] [removeItem] | event=request_received | cart_id=7 | item_id=9
+2026-06-05 01:45:47,025 INFO [cart.removeItem:164] [removeItem] | status_code=200 | event=item_removed | cart_id=7 | item_id=9
+2026-06-05 01:45:47,103 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=7 | variant_id=4 | quantity=1
+2026-06-05 01:45:47,105 INFO [cart.addItem:102] [addItem] | status_code=201 | event=item_added | cart_id=7 | item_id=10 | quantity=1
+2026-06-05 01:45:47,195 INFO [cart.checkout:237] [checkout] | event=request_received | cart_id=7
+2026-06-05 01:45:47,201 INFO [cart.checkout:242] [checkout] | status_code=200 | event=checkout_success | cart_id=7
+2026-06-05 01:45:47,275 INFO [cart.createCart:47] [createCart] | event=request_received | user_id=3
+2026-06-05 01:45:47,277 INFO [cart.createCart:52] [createCart] | status_code=201 | event=cart_created | cart_id=8 | user_id=3
+2026-06-05 01:45:47,371 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=8 | variant_id=7 | quantity=1
+2026-06-05 01:45:47,374 INFO [cart.addItem:102] [addItem] | status_code=201 | event=item_added | cart_id=8 | item_id=11 | quantity=1
+2026-06-05 01:46:35,269 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=5 | variant_id=7 | quantity=5
+2026-06-05 01:46:35,269 WARNING [cart.addItem:135] [addItem] | status_code=422 | error=INSUFFICIENT_STOCK | cart_id=5 | variant_id=7 | quantity=5 | cause=Requested total quantity=6 exceeds available stock=3 for variant_id=7
+2026-06-05 01:47:45,600 INFO [cart.createCart:47] [createCart] | event=request_received | user_id=1
+2026-06-05 01:47:45,603 INFO [cart.createCart:52] [createCart] | status_code=201 | event=cart_created | cart_id=1 | user_id=1
+2026-06-05 01:47:45,738 INFO [cart.createCart:47] [createCart] | event=request_received | user_id=2
+2026-06-05 01:47:45,740 INFO [cart.createCart:52] [createCart] | status_code=201 | event=cart_created | cart_id=2 | user_id=2
+2026-06-05 01:47:45,842 INFO [cart.createCart:47] [createCart] | event=request_received | user_id=1
+2026-06-05 01:47:45,844 WARNING [cart.createCart:71] [createCart] | status_code=409 | error=CART_ALREADY_EXISTS | user_id=1 | cause=User id=1 already has an active cart (cart_id=1)
+2026-06-05 01:47:45,938 INFO [cart.createCart:47] [createCart] | event=request_received | user_id=999
+2026-06-05 01:47:45,938 WARNING [cart.createCart:64] [createCart] | status_code=404 | error=USER_NOT_FOUND | user_id=999 | cause=User with id=999 not found
+2026-06-05 01:47:46,016 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'greater_than', 'loc': ('body', 'user_id'), 'msg': 'Input should be greater than 0', 'input': 0, 'ctx': {'gt': 0}}]
+2026-06-05 01:47:46,094 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'greater_than', 'loc': ('body', 'user_id'), 'msg': 'Input should be greater than 0', 'input': -5, 'ctx': {'gt': 0}}]
+2026-06-05 01:47:46,173 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'int_parsing', 'loc': ('body', 'user_id'), 'msg': 'Input should be a valid integer, unable to parse string as an integer', 'input': 'abc'}]
+2026-06-05 01:47:46,264 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'missing', 'loc': ('body', 'user_id'), 'msg': 'Field required', 'input': {}}]
+2026-06-05 01:47:46,359 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'less_than_equal', 'loc': ('body', 'user_id'), 'msg': 'Input should be less than or equal to 9223372036854775807', 'input': 99999999999999999999, 'ctx': {'le': 9223372036854775807}}]
+2026-06-05 01:47:46,450 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts | fields=['user_id'] | raw=[{'type': 'int_from_float', 'loc': ('body', 'user_id'), 'msg': 'Input should be a valid integer, got a number with a fractional part', 'input': 1.5}]
+2026-06-05 01:47:46,550 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=1 | variant_id=1 | quantity=2
+2026-06-05 01:47:46,556 INFO [cart.addItem:102] [addItem] | status_code=201 | event=item_added | cart_id=1 | item_id=1 | quantity=2
+2026-06-05 01:47:46,656 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=1 | variant_id=1 | quantity=3
+2026-06-05 01:47:46,659 INFO [cart.addItem:102] [addItem] | status_code=201 | event=item_added | cart_id=1 | item_id=1 | quantity=5
+2026-06-05 01:47:46,734 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=1 | variant_id=4 | quantity=1
+2026-06-05 01:47:46,737 INFO [cart.addItem:102] [addItem] | status_code=201 | event=item_added | cart_id=1 | item_id=2 | quantity=1
+2026-06-05 01:47:46,827 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=1 | variant_id=7 | quantity=5
+2026-06-05 01:47:46,831 INFO [cart.addItem:102] [addItem] | status_code=201 | event=item_added | cart_id=1 | item_id=3 | quantity=5
+2026-06-05 01:47:46,907 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=9999 | variant_id=1 | quantity=1
+2026-06-05 01:47:46,908 WARNING [cart.addItem:116] [addItem] | status_code=404 | error=CART_NOT_FOUND | cart_id=9999 | cause=Cart with id=9999 not found
+2026-06-05 01:47:46,999 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=1 | variant_id=9999 | quantity=1
+2026-06-05 01:47:46,999 WARNING [cart.addItem:128] [addItem] | status_code=404 | error=VARIANT_NOT_FOUND | cart_id=1 | variant_id=9999 | cause=Product variant with id=9999 not found
+2026-06-05 01:47:47,094 INFO [cart.createCart:47] [createCart] | event=request_received | user_id=3
+2026-06-05 01:47:47,096 INFO [cart.createCart:52] [createCart] | status_code=201 | event=cart_created | cart_id=3 | user_id=3
+2026-06-05 01:47:47,187 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=3 | variant_id=2 | quantity=1
+2026-06-05 01:47:47,188 INFO [cart.addItem:102] [addItem] | status_code=201 | event=item_added | cart_id=3 | item_id=4 | quantity=1
+2026-06-05 01:47:47,267 INFO [cart.checkout:237] [checkout] | event=request_received | cart_id=3
+2026-06-05 01:47:47,272 INFO [cart.checkout:242] [checkout] | status_code=200 | event=checkout_success | cart_id=3
+2026-06-05 01:47:47,374 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=3 | variant_id=3 | quantity=1
+2026-06-05 01:47:47,374 WARNING [cart.addItem:122] [addItem] | status_code=409 | error=CART_CHECKED_OUT | cart_id=3 | cause=Cart id=3 is already checked out, cannot add items
+2026-06-05 01:47:47,466 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=1 | variant_id=6 | quantity=100
+2026-06-05 01:47:47,468 WARNING [cart.addItem:135] [addItem] | status_code=422 | error=INSUFFICIENT_STOCK | cart_id=1 | variant_id=6 | quantity=100 | cause=Requested quantity=100 exceeds available stock=10 for variant_id=6
+2026-06-05 01:47:47,562 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=1 | variant_id=5 | quantity=7
+2026-06-05 01:47:47,565 INFO [cart.addItem:102] [addItem] | status_code=201 | event=item_added | cart_id=1 | item_id=5 | quantity=7
+2026-06-05 01:47:47,655 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=1 | variant_id=5 | quantity=6
+2026-06-05 01:47:47,655 WARNING [cart.addItem:135] [addItem] | status_code=422 | error=INSUFFICIENT_STOCK | cart_id=1 | variant_id=5 | quantity=6 | cause=Requested total quantity=13 exceeds available stock=12 for variant_id=5
+2026-06-05 01:47:47,734 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/1/items | fields=['quantity'] | raw=[{'type': 'greater_than', 'loc': ('body', 'quantity'), 'msg': 'Input should be greater than 0', 'input': 0, 'ctx': {'gt': 0}}]
+2026-06-05 01:47:47,813 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/1/items | fields=['quantity'] | raw=[{'type': 'greater_than', 'loc': ('body', 'quantity'), 'msg': 'Input should be greater than 0', 'input': -3, 'ctx': {'gt': 0}}]
+2026-06-05 01:47:47,907 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/1/items | fields=['variant_id'] | raw=[{'type': 'greater_than', 'loc': ('body', 'variant_id'), 'msg': 'Input should be greater than 0', 'input': 0, 'ctx': {'gt': 0}}]
+2026-06-05 01:47:47,998 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/1/items | fields=['variant_id'] | raw=[{'type': 'greater_than', 'loc': ('body', 'variant_id'), 'msg': 'Input should be greater than 0', 'input': -1, 'ctx': {'gt': 0}}]
+2026-06-05 01:47:48,077 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/1/items | fields=['variant_id'] | raw=[{'type': 'missing', 'loc': ('body', 'variant_id'), 'msg': 'Field required', 'input': {'quantity': 2}}]
+2026-06-05 01:47:48,172 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/1/items | fields=['quantity'] | raw=[{'type': 'missing', 'loc': ('body', 'quantity'), 'msg': 'Field required', 'input': {'variant_id': 1}}]
+2026-06-05 01:47:48,264 INFO [cart.removeItem:157] [removeItem] | event=request_received | cart_id=1 | item_id=2
+2026-06-05 01:47:48,268 INFO [cart.removeItem:164] [removeItem] | status_code=200 | event=item_removed | cart_id=1 | item_id=2
+2026-06-05 01:47:48,343 INFO [cart.removeItem:157] [removeItem] | event=request_received | cart_id=9999 | item_id=1
+2026-06-05 01:47:48,343 WARNING [cart.removeItem:171] [removeItem] | status_code=404 | error=CART_NOT_FOUND | cart_id=9999 | cause=Cart with id=9999 not found
+2026-06-05 01:47:48,436 INFO [cart.removeItem:157] [removeItem] | event=request_received | cart_id=1 | item_id=9999
+2026-06-05 01:47:48,436 WARNING [cart.removeItem:183] [removeItem] | status_code=404 | error=ITEM_NOT_FOUND | cart_id=1 | item_id=9999 | cause=Item id=9999 not found in cart id=1
+2026-06-05 01:47:48,528 INFO [cart.removeItem:157] [removeItem] | event=request_received | cart_id=2 | item_id=1
+2026-06-05 01:47:48,528 WARNING [cart.removeItem:183] [removeItem] | status_code=404 | error=ITEM_NOT_FOUND | cart_id=2 | item_id=1 | cause=Item id=1 not found in cart id=2
+2026-06-05 01:47:48,606 INFO [cart.removeItem:157] [removeItem] | event=request_received | cart_id=3 | item_id=4
+2026-06-05 01:47:48,606 WARNING [cart.removeItem:177] [removeItem] | status_code=409 | error=CART_CHECKED_OUT | cart_id=3 | cause=Cart id=3 is already checked out, cannot remove items
+2026-06-05 01:47:48,687 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=DELETE | path=/carts/0/items/1 | fields=['cart_id'] | raw=[{'type': 'greater_than', 'loc': ('path', 'cart_id'), 'msg': 'Input should be greater than 0', 'input': '0', 'ctx': {'gt': 0}}]
+2026-06-05 01:47:48,778 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=DELETE | path=/carts/1/items/0 | fields=['item_id'] | raw=[{'type': 'greater_than', 'loc': ('path', 'item_id'), 'msg': 'Input should be greater than 0', 'input': '0', 'ctx': {'gt': 0}}]
+2026-06-05 01:47:48,870 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=DELETE | path=/carts/99999999999999999999/items/1 | fields=['cart_id'] | raw=[{'type': 'less_than_equal', 'loc': ('path', 'cart_id'), 'msg': 'Input should be less than or equal to 9223372036854775807', 'input': '99999999999999999999', 'ctx': {'le': 9223372036854775807}}]
+2026-06-05 01:47:48,962 INFO [cart.deleteCart:206] [deleteCart] | event=request_received | cart_id=2
+2026-06-05 01:47:48,966 INFO [cart.deleteCart:211] [deleteCart] | status_code=200 | event=cart_deleted | cart_id=2
+2026-06-05 01:47:49,057 INFO [cart.createCart:47] [createCart] | event=request_received | user_id=2
+2026-06-05 01:47:49,063 INFO [cart.createCart:52] [createCart] | status_code=201 | event=cart_created | cart_id=4 | user_id=2
+2026-06-05 01:47:49,165 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=4 | variant_id=3 | quantity=2
+2026-06-05 01:47:49,169 INFO [cart.addItem:102] [addItem] | status_code=201 | event=item_added | cart_id=4 | item_id=6 | quantity=2
+2026-06-05 01:47:49,260 INFO [cart.deleteCart:206] [deleteCart] | event=request_received | cart_id=4
+2026-06-05 01:47:49,264 INFO [cart.deleteCart:211] [deleteCart] | status_code=200 | event=cart_deleted | cart_id=4
+2026-06-05 01:47:49,354 INFO [cart.deleteCart:206] [deleteCart] | event=request_received | cart_id=9999
+2026-06-05 01:47:49,354 WARNING [cart.deleteCart:216] [deleteCart] | status_code=404 | error=CART_NOT_FOUND | cart_id=9999 | cause=Cart with id=9999 not found
+2026-06-05 01:47:49,446 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=DELETE | path=/carts/0 | fields=['cart_id'] | raw=[{'type': 'greater_than', 'loc': ('path', 'cart_id'), 'msg': 'Input should be greater than 0', 'input': '0', 'ctx': {'gt': 0}}]
+2026-06-05 01:47:49,527 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=DELETE | path=/carts/-1 | fields=['cart_id'] | raw=[{'type': 'greater_than', 'loc': ('path', 'cart_id'), 'msg': 'Input should be greater than 0', 'input': '-1', 'ctx': {'gt': 0}}]
+2026-06-05 01:47:49,621 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=DELETE | path=/carts/99999999999999999999 | fields=['cart_id'] | raw=[{'type': 'less_than_equal', 'loc': ('path', 'cart_id'), 'msg': 'Input should be less than or equal to 9223372036854775807', 'input': '99999999999999999999', 'ctx': {'le': 9223372036854775807}}]
+2026-06-05 01:47:49,714 INFO [cart.deleteCart:206] [deleteCart] | event=request_received | cart_id=3
+2026-06-05 01:47:49,715 INFO [cart.deleteCart:211] [deleteCart] | status_code=200 | event=cart_deleted | cart_id=3
+2026-06-05 01:47:49,807 INFO [cart.checkout:237] [checkout] | event=request_received | cart_id=1
+2026-06-05 01:47:49,812 INFO [cart.checkout:242] [checkout] | status_code=200 | event=checkout_success | cart_id=1
+2026-06-05 01:47:49,905 INFO [cart.createCart:47] [createCart] | event=request_received | user_id=1
+2026-06-05 01:47:49,907 INFO [cart.createCart:52] [createCart] | status_code=201 | event=cart_created | cart_id=5 | user_id=1
+2026-06-05 01:47:50,014 INFO [cart.addItem:94] [addItem] | event=request_received | cart_id=5 | variant_id=7 | quantity=5
+2026-06-05 01:47:50,015 WARNING [cart.addItem:135] [addItem] | status_code=422 | error=INSUFFICIENT_STOCK | cart_id=5 | variant_id=7 | quantity=5 | cause=Requested quantity=5 exceeds available stock=3 for variant_id=7
+2026-06-05 01:47:50,105 INFO [cart.checkout:237] [checkout] | event=request_received | cart_id=9999
+2026-06-05 01:47:50,106 WARNING [cart.checkout:251] [checkout] | status_code=404 | error=CART_NOT_FOUND | cart_id=9999 | cause=Cart with id=9999 not found
+2026-06-05 01:47:50,200 INFO [cart.checkout:237] [checkout] | event=request_received | cart_id=1
+2026-06-05 01:47:50,200 WARNING [cart.checkout:257] [checkout] | status_code=409 | error=CART_CHECKED_OUT | cart_id=1 | cause=Cart id=1 is already checked out
+2026-06-05 01:47:50,279 INFO [cart.createCart:47] [createCart] | event=request_received | user_id=2
+2026-06-05 01:47:50,283 INFO [cart.createCart:52] [createCart] | status_code=201 | event=cart_created | cart_id=6 | user_id=2
+2026-06-05 01:47:50,374 INFO [cart.checkout:237] [checkout] | event=request_received | cart_id=6
+2026-06-05 01:47:50,374 WARNING [cart.checkout:263] [checkout] | status_code=422 | error=CART_EMPTY | cart_id=6 | cause=Cart id=6 has no items, cannot checkout
+2026-06-05 01:47:50,468 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/0/checkout | fields=['cart_id'] | raw=[{'type': 'greater_than', 'loc': ('path', 'cart_id'), 'msg': 'Input should be greater than 0', 'input': '0', 'ctx': {'gt': 0}}]
+2026-06-05 01:47:50,545 WARNING [main.validationExceptionHandler:48] [validationError] | status_code=422 | error=VALIDATION_ERROR | method=POST | path=/carts/99999999999999999999/checkout | fields=['cart_id'] | raw=[{'type': 'less_than_equal', 'loc': ('path', 'cart_id'), 'msg': 'Input should be less than or equal to 9223372036854775807', 'input': '99999999999999999999', 'ctx': {'le': 9223372036854775807}}]
