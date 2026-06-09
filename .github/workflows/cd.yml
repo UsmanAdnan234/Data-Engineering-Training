@@ -160,6 +160,9 @@ jobs:
           export IMAGE_TAG="${{ steps.slots.outputs.image_tag }}"
           export DATABASE_URL="${{ secrets.DATABASE_URL }}"
 
+          mkdir -p /home/$USER/app/logs
+          chmod 777 /home/$USER/app/logs
+
           echo "Pulling $DOCKER_IMAGE:$IMAGE_TAG..."
           docker pull "$DOCKER_IMAGE:$IMAGE_TAG"
 
