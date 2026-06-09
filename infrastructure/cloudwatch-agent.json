@@ -34,9 +34,7 @@
       "disk": {
         "measurement": [
           "used_percent",
-          "inodes_free",
-          "read_bytes",
-          "write_bytes"
+          "inodes_free"
         ],
         "metrics_collection_interval": 60,
         "resources": ["/"]
@@ -81,7 +79,7 @@
       "files": {
         "collect_list": [
           {
-            "file_path": "/home/ec2-user/app/logs/app.log",
+            "file_path": "/home/ubuntu/app/logs/app.log",
             "log_group_name": "/cart-api/application",
             "log_stream_name": "{instance_id}/app",
             "timezone": "UTC",
