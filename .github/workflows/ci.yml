@@ -42,12 +42,12 @@ jobs:
             -o bandit-report.json \
             --exit-zero
 
-      - name: Safety — dependency CVE check
-        run: safety check --full-report
+      - name: pip-audit — dependency CVE check
+        run: pip-audit
         continue-on-error: true
 
       - name: MyPy — type checking
-        run: mypy app/ --ignore-missing-imports
+        run: mypy -p app --ignore-missing-imports
         continue-on-error: true
 
       - name: Upload Bandit report

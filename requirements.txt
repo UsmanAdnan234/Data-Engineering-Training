@@ -9,7 +9,7 @@ sqlalchemy==2.0.35
 # Code quality
 ruff==0.6.9
 bandit==1.7.10
-safety==3.2.8
+pip-audit==2.7.3
 mypy==1.11.2
 
 # Testing
