@@ -1,0 +1,145 @@
+{
+  "info": {
+    "name": "Cart API Load Test",
+    "_postman_id": "load-test-001",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://cart-api-alb-2053330170.eu-north-1.elb.amazonaws.com"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health Check",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/health"
+      }
+    },
+    {
+      "name": "Create Cart",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const uid = Math.floor(Math.random() * 500000) + 1;",
+              "pm.variables.set('rand_user_id', uid);"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 201', () => pm.response.to.have.status(201));",
+              "if (pm.response.code === 201) {",
+              "    const json = pm.response.json();",
+              "    pm.variables.set('cart_id', json.cart_id);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"user_id\": {{rand_user_id}}}"
+        },
+        "url": "{{baseUrl}}/carts"
+      }
+    },
+    {
+      "name": "Add Item to Cart",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const vid = Math.floor(Math.random() * 100000) + 1;",
+              "const qty = Math.floor(Math.random() * 5) + 1;",
+              "pm.variables.set('rand_variant_id', vid);",
+              "pm.variables.set('rand_qty', qty);"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Item added (201 or 422)', () => {",
+              "    pm.expect([201, 422]).to.include(pm.response.code);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"variant_id\": {{rand_variant_id}}, \"quantity\": {{rand_qty}}}"
+        },
+        "url": "{{baseUrl}}/carts/{{cart_id}}/items"
+      }
+    },
+    {
+      "name": "Get Cart",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/carts/{{cart_id}}"
+      }
+    },
+    {
+      "name": "Checkout Cart",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Checkout ok (200 or 422)', () => {",
+              "    pm.expect([200, 422]).to.include(pm.response.code);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/carts/{{cart_id}}/checkout"
+      }
+    }
+  ]
+}

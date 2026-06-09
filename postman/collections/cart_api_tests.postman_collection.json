@@ -6,7 +6,7 @@
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "baseUrl",              "value": "http://127.0.0.1:8000" },
+    { "key": "baseUrl",              "value": "http://cart-api-alb-2053330170.eu-north-1.elb.amazonaws.com" },
     { "key": "cart_id_user1",        "value": "" },
     { "key": "cart_id_user2",        "value": "" },
     { "key": "cart_id_checked_out",  "value": "" },
