@@ -194,8 +194,8 @@ jobs:
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
             -X POST "http://$HOST:8000/carts" \
             -H "Content-Type: application/json" \
-            -d '{"user_id": 999}')
-          echo "POST /carts {user_id:999} → HTTP $STATUS (expect 404)"
+            -d '{"user_id": 999999999}')
+          echo "POST /carts {user_id:999999999} → HTTP $STATUS (expect 404)"
           [ "$STATUS" == "404" ] || { echo "::error::Smoke test failed."; exit 1; }
           echo "Smoke test passed."
 
