@@ -1,5 +1,5 @@
+
 import pytest
-from unittest.mock import MagicMock
 
 from app.core.exceptions import (
     CartAlreadyCheckedOutException,
@@ -11,8 +11,6 @@ from app.core.exceptions import (
     UserNotFoundException,
     VariantNotFoundException,
 )
-from app.services.cart_service import CartService
-
 
 # ─────────────────────────────────────────
 # createCart

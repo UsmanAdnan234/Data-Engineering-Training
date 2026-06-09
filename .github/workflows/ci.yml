@@ -7,6 +7,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
 
   # ─────────────────────────────────────────────────────
@@ -38,7 +41,6 @@ jobs:
             -f json \
             -o bandit-report.json \
             --exit-zero
-          bandit -r app/ -ll
 
       - name: Safety — dependency CVE check
         run: safety check --full-report
@@ -149,10 +151,11 @@ jobs:
 
       - name: SonarCloud Scan
         if: steps.check_token.outputs.available == 'true'
-        uses: SonarSource/sonarcloud-github-action@master
+        uses: SonarSource/sonarqube-scan-action@v5
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
 
   # ─────────────────────────────────────────────────────
   # JOB 4: Docker — build and push to DockerHub

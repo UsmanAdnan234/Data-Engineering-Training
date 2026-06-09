@@ -1,6 +1,7 @@
+from unittest.mock import MagicMock
+
 import psycopg2
 import pytest
-from unittest.mock import MagicMock
 
 from app.services.cart_service import CartService
 
