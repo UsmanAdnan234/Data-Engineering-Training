@@ -142,6 +142,13 @@ jobs:
           echo "Active slot  : blue weight=$BLUE_WEIGHT"
           echo "Deploying to : $( [ "$BLUE_WEIGHT" -ge 50 ] && echo green || echo blue )"
 
+      - name: Copy compose file to inactive slot
+        run: |
+          scp -i ~/.ssh/deploy_key.pem \
+            -o StrictHostKeyChecking=no \
+            docker-compose.prod.yml \
+            "${{ secrets.EC2_USER }}@${{ steps.slots.outputs.inactive_host }}:/home/${{ secrets.EC2_USER }}/app/docker-compose.prod.yml"
+
       - name: Deploy image to inactive slot (${{ steps.slots.outputs.inactive_slot }})
         run: |
           ssh -i ~/.ssh/deploy_key.pem \
