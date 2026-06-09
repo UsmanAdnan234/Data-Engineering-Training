@@ -161,7 +161,7 @@ jobs:
           export DATABASE_URL="${{ secrets.DATABASE_URL }}"
 
           mkdir -p /home/$USER/app/logs
-          chmod 777 /home/$USER/app/logs
+          sudo chmod 777 /home/$USER/app/logs
 
           echo "Pulling $DOCKER_IMAGE:$IMAGE_TAG..."
           docker pull "$DOCKER_IMAGE:$IMAGE_TAG"
