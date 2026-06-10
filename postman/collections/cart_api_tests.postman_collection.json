@@ -201,7 +201,7 @@
         },
 
         {
-          "name": "TC-09 — user_id overflow (exceeds SQLite max integer)",
+          "name": "TC-09 — user_id overflow (exceeds PostgreSQL INTEGER max 2147483647)",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
