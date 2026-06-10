@@ -10,6 +10,11 @@ app = FastAPI()
 app.include_router(cartRouter)
 
 
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
+
 def _friendlyMessage(errType: str, ctx: dict | None) -> str:
     ctx = ctx or {}
     messages = {
