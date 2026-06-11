@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request
 from fastapi.exceptions import HTTPException, RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 
 from app.api.cart import router as cartRouter
 from app.core.logger import logger
@@ -8,6 +8,11 @@ from app.core.logger import logger
 app = FastAPI()
 
 app.include_router(cartRouter)
+
+
+@app.get("/", include_in_schema=False)
+async def root():
+    return RedirectResponse(url="/docs")
 
 
 @app.get("/health")
