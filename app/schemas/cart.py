@@ -1,10 +1,10 @@
 from pydantic import BaseModel, Field
 
-SQLITE_INT_MAX = 9223372036854775807
+PG_INT_MAX = 2147483647
 
 
 class CreateCartRequest(BaseModel):
-    user_id: int = Field(gt=0, le=SQLITE_INT_MAX)
+    user_id: int = Field(gt=0, le=PG_INT_MAX)
 
 
 class CreateCartResponse(BaseModel):
@@ -14,7 +14,7 @@ class CreateCartResponse(BaseModel):
 
 
 class AddCartItemRequest(BaseModel):
-    variant_id: int = Field(gt=0, le=SQLITE_INT_MAX)
+    variant_id: int = Field(gt=0, le=PG_INT_MAX)
     quantity: int = Field(gt=0)
 
 

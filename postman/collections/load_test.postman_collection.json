@@ -104,24 +104,6 @@
       }
     },
     {
-      "name": "Get Cart",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('Status 200', () => pm.response.to.have.status(200));"
-            ],
-            "type": "text/javascript"
-          }
-        }
-      ],
-      "request": {
-        "method": "GET",
-        "url": "{{baseUrl}}/carts/{{cart_id}}"
-      }
-    },
-    {
       "name": "Checkout Cart",
       "event": [
         {

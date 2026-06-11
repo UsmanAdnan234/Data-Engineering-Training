@@ -17,7 +17,7 @@ from app.core.logger import logger
 from app.database.connection import DatabaseConnection
 from app.repositories.cart_repository import CartRepository
 from app.schemas.cart import (
-    SQLITE_INT_MAX,
+    PG_INT_MAX,
     AddCartItemRequest,
     AddCartItemResponse,
     CheckoutResponse,
@@ -108,7 +108,7 @@ def createCart(payload: CreateCartRequest, service: ICartService = Depends(getCa
 # =========================
 @router.post("/carts/{cart_id}/items", response_model=AddCartItemResponse, status_code=201)
 def addItem(
-    cart_id: Annotated[int, Path(gt=0, le=SQLITE_INT_MAX)],
+    cart_id: Annotated[int, Path(gt=0, le=PG_INT_MAX)],
     payload: AddCartItemRequest,
     service: ICartService = Depends(getCartService)
 ):
@@ -178,8 +178,8 @@ def addItem(
 # =========================
 @router.delete("/carts/{cart_id}/items/{item_id}", response_model=RemoveCartItemResponse, status_code=200)
 def removeItem(
-    cart_id: Annotated[int, Path(gt=0, le=SQLITE_INT_MAX)],
-    item_id: Annotated[int, Path(gt=0, le=SQLITE_INT_MAX)],
+    cart_id: Annotated[int, Path(gt=0, le=PG_INT_MAX)],
+    item_id: Annotated[int, Path(gt=0, le=PG_INT_MAX)],
     service: ICartService = Depends(getCartService)
 ):
 
@@ -234,7 +234,7 @@ def removeItem(
 # =========================
 @router.delete("/carts/{cart_id}", response_model=DeleteCartResponse, status_code=200)
 def deleteCart(
-    cart_id: Annotated[int, Path(gt=0, le=SQLITE_INT_MAX)],
+    cart_id: Annotated[int, Path(gt=0, le=PG_INT_MAX)],
     service: ICartService = Depends(getCartService)
 ):
 
@@ -271,7 +271,7 @@ def deleteCart(
 # =========================
 @router.post("/carts/{cart_id}/checkout", response_model=CheckoutResponse, status_code=200)
 def checkout(
-    cart_id: Annotated[int, Path(gt=0, le=SQLITE_INT_MAX)],
+    cart_id: Annotated[int, Path(gt=0, le=PG_INT_MAX)],
     service: ICartService = Depends(getCartService)
 ):
 
