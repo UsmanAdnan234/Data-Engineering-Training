@@ -59,7 +59,7 @@ def run_script(script_name: str, stage: str) -> None:
             notify_failure(pipeline_name=pipeline_name, error=error, stage=stage)
             raise error
 
-
+####
 with DAG(
     dag_id="etl_pipeline",
     description="RDS → Bronze → Silver → Gold (Medallion Architecture)",
