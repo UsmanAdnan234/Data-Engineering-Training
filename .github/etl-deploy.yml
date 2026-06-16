@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'etl/**'        # only triggers when etl folder changes
+      - 'etl/**'
 
 jobs:
   deploy:
