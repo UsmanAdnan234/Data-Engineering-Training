@@ -12,14 +12,11 @@ import sys
 import time
 from datetime import datetime, timedelta
 
+sys.path.insert(0, "/opt/airflow")
+
 from airflow import DAG
 from airflow.operators.python import PythonOperator
-
-# ── Slack notifier ──────────────────────────────────────────────
-import sys
-sys.path.insert(0, "/opt/airflow")
-from notifications.slack_notifier import notify_success, notify_failure, notify_retry
-# ────────────────────────────────────────────────────────────────
+from notifications.slack_notifier import notify_failure, notify_retry, notify_success
 
 default_args = {
     "owner":          "data-team",
@@ -28,11 +25,10 @@ default_args = {
     "email_on_retry": False,
 }
 
-MAX_RETRIES = 3  
+MAX_RETRIES = 3
 
 
 def run_script(script_name: str, stage: str) -> None:
-    """Run a script with retry logic and Slack notifications."""
     script_path = f"/opt/airflow/scripts/{script_name}"
     pipeline_name = f"etl_pipeline → {stage}"
 
@@ -48,11 +44,7 @@ def run_script(script_name: str, stage: str) -> None:
         duration = time.time() - start
 
         if result.returncode == 0:
-            # ✅ Success
-            notify_success(
-                pipeline_name=pipeline_name,
-                duration_sec=duration,
-            )
+            notify_success(pipeline_name=pipeline_name, duration_sec=duration)
             return
 
         error = RuntimeError(
@@ -61,21 +53,10 @@ def run_script(script_name: str, stage: str) -> None:
         print("STDERR:", result.stderr)
 
         if attempt < MAX_RETRIES:
-    
-            notify_retry(
-                pipeline_name=pipeline_name,
-                attempt=attempt,
-                max_attempts=MAX_RETRIES,
-                error=error,
-            )
-            time.sleep(10 * attempt)   # backoff: 10s → 20s → 30s
+            notify_retry(pipeline_name=pipeline_name, attempt=attempt, max_attempts=MAX_RETRIES, error=error)
+            time.sleep(10 * attempt)
         else:
-            
-            notify_failure(
-                pipeline_name=pipeline_name,
-                error=error,
-                stage=stage,
-            )
+            notify_failure(pipeline_name=pipeline_name, error=error, stage=stage)
             raise error
 
 

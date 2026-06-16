@@ -1,19 +1,20 @@
-import requests
+import os
 import traceback
 from datetime import datetime
+
+import requests
 
 SLACK_WEBHOOK_URL = os.environ["SLACK_WEBHOOK_URL"]
 
 def send_slack_message(message: dict):
-    """Send a formatted message to Slack."""
     response = requests.post(SLACK_WEBHOOK_URL, json=message)
     response.raise_for_status()
 
 def notify_success(pipeline_name: str, records_processed: int = None, duration_sec: float = None):
     message = {
-        "text": f"ETL Pipeline Succeeded",
+        "text": "ETL Pipeline Succeeded",
         "attachments": [{
-            "color": "#36a64f",  
+            "color": "#36a64f",
             "fields": [
                 {"title": "Pipeline", "value": pipeline_name, "short": True},
                 {"title": "Time", "value": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "short": True},
@@ -26,9 +27,9 @@ def notify_success(pipeline_name: str, records_processed: int = None, duration_s
 
 def notify_failure(pipeline_name: str, error: Exception, stage: str = None):
     message = {
-        "text": f"ETL Pipeline Failed",
+        "text": "ETL Pipeline Failed",
         "attachments": [{
-            "color": "#ff0000",  
+            "color": "#ff0000",
             "fields": [
                 {"title": "Pipeline", "value": pipeline_name, "short": True},
                 {"title": "Failed Stage", "value": stage or "Unknown", "short": True},
@@ -41,9 +42,9 @@ def notify_failure(pipeline_name: str, error: Exception, stage: str = None):
 
 def notify_retry(pipeline_name: str, attempt: int, max_attempts: int, error: Exception):
     message = {
-        "text": f"ETL Pipeline Retrying",
+        "text": "ETL Pipeline Retrying",
         "attachments": [{
-            "color": "#ffaa00",  
+            "color": "#ffaa00",
             "fields": [
                 {"title": "Pipeline", "value": pipeline_name, "short": True},
                 {"title": "Attempt", "value": f"{attempt} of {max_attempts}", "short": True},
