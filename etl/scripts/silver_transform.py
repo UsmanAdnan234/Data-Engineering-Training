@@ -1,5 +1,5 @@
 """
-Silver Layer — Clean and validate bronze data using PySpark.
+Silver Layer — Clean and validate bronze data using pandas.
 Removes nulls, deduplicates, standardises formats.
 """
 import logging
@@ -10,8 +10,6 @@ from io import BytesIO
 
 import boto3
 import pandas as pd
-from pyspark.sql import DataFrame, SparkSession
-from pyspark.sql import functions as F
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -29,80 +27,57 @@ def s3_client():
     )
 
 
-def get_spark() -> SparkSession:
-    return (
-        SparkSession.builder
-        .appName("SilverTransform")
-        .master("local[1]")
-        .config("spark.driver.memory", "1g")
-        .config("spark.driver.maxResultSize", "512m")
-        .config("spark.sql.shuffle.partitions", "4")
-        .config("spark.executor.memory", "1g")
-        .getOrCreate()
-    )
-
-
 def download_bronze(client, table: str, run_date: str) -> pd.DataFrame:
-    key = f"bronze/{table}/run_date={run_date}/{table}.parquet"
+    key  = f"bronze/{table}/run_date={run_date}/{table}.parquet"
     resp = client.get_object(Bucket=S3_BUCKET, Key=key)
     df   = pd.read_parquet(BytesIO(resp["Body"].read()))
     logger.info(f"  {table} bronze rows: {len(df):,}")
     return df
 
 
-def upload_silver(client, df_spark: DataFrame, table: str, run_date: str) -> None:
+def upload_silver(client, df: pd.DataFrame, table: str, run_date: str) -> None:
     key = f"silver/{table}/run_date={run_date}/{table}.parquet"
     with tempfile.NamedTemporaryFile(suffix=".parquet", delete=False) as tmp:
         path = tmp.name
-    df_spark.toPandas().to_parquet(path, index=False, engine="pyarrow")
+    df.to_parquet(path, index=False, engine="pyarrow")
     with open(path, "rb") as f:
         client.put_object(Bucket=S3_BUCKET, Key=key, Body=f.read())
     os.unlink(path)
     logger.info(f"  Uploaded → s3://{S3_BUCKET}/{key}")
 
 
-def clean_users(spark: SparkSession, raw: pd.DataFrame) -> DataFrame:
-    df = spark.createDataFrame(raw)
-    df = df.dropDuplicates(["user_id"])
-    df = df.filter(
-        F.col("name").isNotNull() &
-        F.col("email").isNotNull() &
-        F.col("phone").isNotNull()
-    )
-    df = df.withColumn("email", F.lower(F.trim(F.col("email"))))
-    df = df.withColumn("name",  F.trim(F.col("name")))
+def clean_users(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.drop_duplicates(subset=["user_id"])
+    df = df.dropna(subset=["name", "email", "phone"])
+    df["email"] = df["email"].str.lower().str.strip()
+    df["name"]  = df["name"].str.strip()
     return df
 
 
-def clean_products(spark: SparkSession, raw: pd.DataFrame) -> DataFrame:
-    df = spark.createDataFrame(raw)
-    df = df.dropDuplicates(["product_id"])
-    df = df.filter(F.col("name").isNotNull())
-    df = df.withColumn("name", F.trim(F.col("name")))
+def clean_products(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.drop_duplicates(subset=["product_id"])
+    df = df.dropna(subset=["name"])
+    df["name"] = df["name"].str.strip()
     return df
 
 
-def clean_product_variants(spark: SparkSession, raw: pd.DataFrame) -> DataFrame:
-    df = spark.createDataFrame(raw)
-    df = df.dropDuplicates(["variant_id"])
-    df = df.filter(
-        F.col("price").isNotNull() & (F.col("price") > 0) &
-        F.col("stock").isNotNull() & (F.col("stock") >= 0)
-    )
+def clean_product_variants(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.drop_duplicates(subset=["variant_id"])
+    df = df.dropna(subset=["price", "stock"])
+    df = df[(df["price"] > 0) & (df["stock"] >= 0)]
     return df
 
 
-def clean_carts(spark: SparkSession, raw: pd.DataFrame) -> DataFrame:
-    df = spark.createDataFrame(raw)
-    df = df.dropDuplicates(["cart_id"])
-    df = df.filter(F.col("status").isin("active", "checked_out"))
+def clean_carts(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.drop_duplicates(subset=["cart_id"])
+    df = df[df["status"].isin(["active", "checked_out"])]
     return df
 
 
-def clean_cart_items(spark: SparkSession, raw: pd.DataFrame) -> DataFrame:
-    df = spark.createDataFrame(raw)
-    df = df.dropDuplicates(["item_id"])
-    df = df.filter(F.col("quantity").isNotNull() & (F.col("quantity") > 0))
+def clean_cart_items(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.drop_duplicates(subset=["item_id"])
+    df = df.dropna(subset=["quantity"])
+    df = df[df["quantity"] > 0]
     return df
 
 
@@ -120,7 +95,6 @@ def main():
     logger.info(f"=== Silver transformation started | run_date={run_date} ===")
 
     client = s3_client()
-    spark  = get_spark()
 
     for table, transform_fn in TRANSFORMS.items():
         logger.info(f"Transforming: {table}")
@@ -128,11 +102,10 @@ def main():
         if raw.empty:
             logger.warning(f"  {table} bronze is empty — skipping")
             continue
-        df_clean = transform_fn(spark, raw)
-        logger.info(f"  {table} silver rows: {df_clean.count():,}")
+        df_clean = transform_fn(raw)
+        logger.info(f"  {table} silver rows: {len(df_clean):,}")
         upload_silver(client, df_clean, table, run_date)
 
-    spark.stop()
     logger.info("=== Silver transformation complete ===")
 
 

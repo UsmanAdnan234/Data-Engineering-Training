@@ -1,5 +1,5 @@
 """
-Gold Layer — Business metrics aggregated from silver data using PySpark.
+Gold Layer — Business metrics aggregated from silver data using pandas.
 Produces 4 analytical datasets ready for reporting.
 """
 import logging
@@ -10,8 +10,6 @@ from io import BytesIO
 
 import boto3
 import pandas as pd
-from pyspark.sql import DataFrame, SparkSession
-from pyspark.sql import functions as F
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -29,110 +27,99 @@ def s3_client():
     )
 
 
-def get_spark() -> SparkSession:
-    return (
-        SparkSession.builder
-        .appName("GoldAggregate")
-        .master("local[1]")
-        .config("spark.driver.memory", "1g")
-        .config("spark.driver.maxResultSize", "512m")
-        .config("spark.sql.shuffle.partitions", "4")
-        .config("spark.executor.memory", "1g")
-        .getOrCreate()
-    )
-
-def load_silver(client, spark: SparkSession, table: str, run_date: str) -> DataFrame:
+def load_silver(client, table: str, run_date: str) -> pd.DataFrame:
     key  = f"silver/{table}/run_date={run_date}/{table}.parquet"
     resp = client.get_object(Bucket=S3_BUCKET, Key=key)
-    df   = spark.createDataFrame(pd.read_parquet(BytesIO(resp["Body"].read())))
-    logger.info(f"  Loaded silver/{table}: {df.count():,} rows")
+    df   = pd.read_parquet(BytesIO(resp["Body"].read()))
+    logger.info(f"  Loaded silver/{table}: {len(df):,} rows")
     return df
 
 
-def upload_gold(client, df: DataFrame, name: str, run_date: str) -> None:
+def upload_gold(client, df: pd.DataFrame, name: str, run_date: str) -> None:
     key = f"gold/{name}/run_date={run_date}/{name}.parquet"
     with tempfile.NamedTemporaryFile(suffix=".parquet", delete=False) as tmp:
         path = tmp.name
-    df.toPandas().to_parquet(path, index=False, engine="pyarrow")
+    df.to_parquet(path, index=False, engine="pyarrow")
     with open(path, "rb") as f:
         client.put_object(Bucket=S3_BUCKET, Key=key, Body=f.read())
     os.unlink(path)
-    logger.info(f"  Uploaded gold/{name} → s3://{S3_BUCKET}/{key}  ({df.count():,} rows)")
+    logger.info(f"  Uploaded gold/{name} → s3://{S3_BUCKET}/{key}  ({len(df):,} rows)")
 
 
 def main():
     run_date = datetime.utcnow().strftime("%Y-%m-%d")
     logger.info(f"=== Gold aggregation started | run_date={run_date} ===")
 
-    client = s3_client()
-    spark  = get_spark()
+    client   = s3_client()
+    users    = load_silver(client, "users",            run_date)
+    products = load_silver(client, "products",         run_date)
+    variants = load_silver(client, "product_variants", run_date)
+    carts    = load_silver(client, "carts",            run_date)
+    items    = load_silver(client, "cart_items",       run_date)
 
-    
-    users      = load_silver(client, spark, "users",            run_date)
-    products   = load_silver(client, spark, "products",         run_date)
-    variants   = load_silver(client, spark, "product_variants", run_date)
-    carts      = load_silver(client, spark, "carts",            run_date)
-    cart_items = load_silver(client, spark, "cart_items",       run_date)
-
-
+    # cart_summary
+    merged = items.merge(variants[["variant_id", "price"]], on="variant_id")
+    merged["line_total"] = merged["quantity"] * merged["price"]
     cart_summary = (
-        cart_items
-        .join(variants, "variant_id")
-        .withColumn("line_total", F.col("quantity") * F.col("price"))
-        .groupBy("cart_id")
+        merged.groupby("cart_id")
         .agg(
-            F.round(F.sum("line_total"), 2).alias("total_value"),
-            F.sum("quantity").alias("total_items"),
-            F.countDistinct("variant_id").alias("unique_products"),
+            total_value=("line_total", "sum"),
+            total_items=("quantity",   "sum"),
+            unique_products=("variant_id", "nunique"),
         )
-        .join(carts, "cart_id")
-        .join(users.select("user_id", "name", "email"), "user_id")
+        .reset_index()
     )
+    cart_summary["total_value"] = cart_summary["total_value"].round(2)
+    cart_summary = cart_summary.merge(carts[["cart_id", "user_id", "status"]], on="cart_id")
+    cart_summary = cart_summary.merge(users[["user_id", "name", "email"]], on="user_id")
     upload_gold(client, cart_summary, "cart_summary", run_date)
 
-    
+    # user_activity
     user_activity = (
-        carts
-        .groupBy("user_id")
+        carts.groupby("user_id")
         .agg(
-            F.count("cart_id").alias("total_carts"),
-            F.sum(F.when(F.col("status") == "checked_out", 1).otherwise(0)).alias("checked_out_carts"),
-            F.sum(F.when(F.col("status") == "active",      1).otherwise(0)).alias("active_carts"),
+            total_carts=("cart_id", "count"),
+            checked_out_carts=("status", lambda x: (x == "checked_out").sum()),
+            active_carts=("status",      lambda x: (x == "active").sum()),
         )
-        .join(users.select("user_id", "name", "email"), "user_id")
+        .reset_index()
     )
+    user_activity = user_activity.merge(users[["user_id", "name", "email"]], on="user_id")
     upload_gold(client, user_activity, "user_activity", run_date)
 
-    
+    # product_popularity
+    merged2 = items.merge(variants[["variant_id", "product_id", "price"]], on="variant_id")
+    merged2 = merged2.merge(products[["product_id", "name"]], on="product_id")
+    merged2["revenue"] = merged2["quantity"] * merged2["price"]
     product_popularity = (
-        cart_items
-        .join(variants, "variant_id")
-        .join(products, "product_id")
-        .groupBy("product_id", "name")
+        merged2.groupby(["product_id", "name"])
         .agg(
-            F.sum("quantity").alias("total_units_ordered"),
-            F.countDistinct("cart_id").alias("times_added_to_cart"),
-            F.round(F.sum(F.col("quantity") * F.col("price")), 2).alias("total_revenue"),
+            total_units_ordered=("quantity",  "sum"),
+            times_added_to_cart=("cart_id",   "nunique"),
+            total_revenue=("revenue",         "sum"),
         )
-        .orderBy(F.col("total_units_ordered").desc())
+        .reset_index()
+        .sort_values("total_units_ordered", ascending=False)
     )
+    product_popularity["total_revenue"] = product_popularity["total_revenue"].round(2)
     upload_gold(client, product_popularity, "product_popularity", run_date)
 
+    # variant_stock_summary
+    merged3 = variants.merge(products[["product_id", "name"]], on="product_id")
     variant_stock = (
-        variants
-        .join(products, "product_id")
-        .groupBy("product_id", "name")
+        merged3.groupby(["product_id", "name"])
         .agg(
-            F.sum("stock").alias("total_stock"),
-            F.count("variant_id").alias("variant_count"),
-            F.round(F.avg("price"), 2).alias("avg_price"),
-            F.min("price").alias("min_price"),
-            F.max("price").alias("max_price"),
+            total_stock=("stock",      "sum"),
+            variant_count=("variant_id", "count"),
+            avg_price=("price",        "mean"),
+            min_price=("price",        "min"),
+            max_price=("price",        "max"),
         )
+        .reset_index()
     )
+    variant_stock["avg_price"] = variant_stock["avg_price"].round(2)
     upload_gold(client, variant_stock, "variant_stock_summary", run_date)
 
-    spark.stop()
     logger.info("=== Gold aggregation complete ===")
 
 
