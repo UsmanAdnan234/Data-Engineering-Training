@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'etl/**'
+      - '.github/workflows/deploy-etl.yml'
   workflow_dispatch:
 
 # Required GitHub Secrets:
