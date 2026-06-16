@@ -1,0 +1,7 @@
+echo "logs/" >> etl/.gitignore
+echo "__pycache__/" >> etl/.gitignore
+echo ".env" >> etl/.gitignore
+
+git add etl/.gitignore
+git commit -m "add etl .gitignore"
+git push origin main

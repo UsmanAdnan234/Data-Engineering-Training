@@ -18,6 +18,7 @@ x-airflow-common: &airflow-common
     AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
     AWS_DEFAULT_REGION: eu-north-1
     S3_BUCKET: cart-api-datalake
+    SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL} 
   volumes:
     - ./dags:/opt/airflow/dags
     - ./logs:/opt/airflow/logs
@@ -35,6 +36,7 @@ services:
       POSTGRES_USER: airflow
       POSTGRES_PASSWORD: airflow
       POSTGRES_DB: airflow
+      
     volumes:
       - postgres-airflow-data:/var/lib/postgresql/data
     healthcheck:
