@@ -32,9 +32,8 @@ jobs:
 
       - name: Sync ETL files to EC2
         run: |
-          rsync -avz --delete \
-            -e "ssh -i ~/.ssh/deploy_key.pem -o StrictHostKeyChecking=no" \
-            ./etl/ \
+          scp -i ~/.ssh/deploy_key.pem -o StrictHostKeyChecking=no -r \
+            ./etl/dags ./etl/scripts ./etl/docker-compose.airflow.yml ./etl/Dockerfile.airflow \
             "${{ secrets.EC2_USER }}@${{ secrets.ETL_EC2_HOST }}:~/etl/"
 
       - name: Check if Dockerfile.airflow changed
