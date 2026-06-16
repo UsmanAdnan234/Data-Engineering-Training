@@ -33,9 +33,11 @@ def get_spark() -> SparkSession:
     return (
         SparkSession.builder
         .appName("SilverTransform")
-        .master("local[*]")
-        .config("spark.driver.memory", "2g")
-        .config("spark.sql.shuffle.partitions", "8")
+        .master("local[1]")
+        .config("spark.driver.memory", "1g")
+        .config("spark.driver.maxResultSize", "512m")
+        .config("spark.sql.shuffle.partitions", "4")
+        .config("spark.executor.memory", "1g")
         .getOrCreate()
     )
 
@@ -58,8 +60,6 @@ def upload_silver(client, df_spark: DataFrame, table: str, run_date: str) -> Non
     os.unlink(path)
     logger.info(f"  Uploaded → s3://{S3_BUCKET}/{key}")
 
-
-# ── Per-table transformations ────────────────────────────────────────────────
 
 def clean_users(spark: SparkSession, raw: pd.DataFrame) -> DataFrame:
     df = spark.createDataFrame(raw)

@@ -33,12 +33,13 @@ def get_spark() -> SparkSession:
     return (
         SparkSession.builder
         .appName("GoldAggregate")
-        .master("local[*]")
-        .config("spark.driver.memory", "2g")
-        .config("spark.sql.shuffle.partitions", "8")
+        .master("local[1]")
+        .config("spark.driver.memory", "1g")
+        .config("spark.driver.maxResultSize", "512m")
+        .config("spark.sql.shuffle.partitions", "4")
+        .config("spark.executor.memory", "1g")
         .getOrCreate()
     )
-
 
 def load_silver(client, spark: SparkSession, table: str, run_date: str) -> DataFrame:
     key  = f"silver/{table}/run_date={run_date}/{table}.parquet"
@@ -66,15 +67,14 @@ def main():
     client = s3_client()
     spark  = get_spark()
 
-    # Load all silver tables
+    
     users      = load_silver(client, spark, "users",            run_date)
     products   = load_silver(client, spark, "products",         run_date)
     variants   = load_silver(client, spark, "product_variants", run_date)
     carts      = load_silver(client, spark, "carts",            run_date)
     cart_items = load_silver(client, spark, "cart_items",       run_date)
 
-    # ── Gold 1: cart_summary ─────────────────────────────────────────────────
-    # Per cart: total value, item count, user info
+
     cart_summary = (
         cart_items
         .join(variants, "variant_id")
@@ -90,8 +90,7 @@ def main():
     )
     upload_gold(client, cart_summary, "cart_summary", run_date)
 
-    # ── Gold 2: user_activity ────────────────────────────────────────────────
-    # Per user: how many carts, how many checked out
+    
     user_activity = (
         carts
         .groupBy("user_id")
@@ -104,8 +103,7 @@ def main():
     )
     upload_gold(client, user_activity, "user_activity", run_date)
 
-    # ── Gold 3: product_popularity ───────────────────────────────────────────
-    # Per product: total units ordered, revenue, times added to cart
+    
     product_popularity = (
         cart_items
         .join(variants, "variant_id")
@@ -120,8 +118,6 @@ def main():
     )
     upload_gold(client, product_popularity, "product_popularity", run_date)
 
-    # ── Gold 4: variant_stock_summary ────────────────────────────────────────
-    # Per product: stock levels and price range across variants
     variant_stock = (
         variants
         .join(products, "product_id")

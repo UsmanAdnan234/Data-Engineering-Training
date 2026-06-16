@@ -9,31 +9,74 @@ Gold:   aggregate business metrics with PySpark → S3
 import os
 import subprocess
 import sys
+import time
 from datetime import datetime, timedelta
 
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 
+# ── Slack notifier ──────────────────────────────────────────────
+import sys
+sys.path.insert(0, "/opt/airflow")
+from notifications.slack_notifier import notify_success, notify_failure, notify_retry
+# ────────────────────────────────────────────────────────────────
+
 default_args = {
     "owner":          "data-team",
-    "retries":        1,
+    "retries":        0,
     "retry_delay":    timedelta(minutes=5),
     "email_on_retry": False,
 }
 
+MAX_RETRIES = 3  
 
-def run_script(script_name: str) -> None:
+
+def run_script(script_name: str, stage: str) -> None:
+    """Run a script with retry logic and Slack notifications."""
     script_path = f"/opt/airflow/scripts/{script_name}"
-    result = subprocess.run(
-        [sys.executable, script_path],
-        capture_output=True,
-        text=True,
-        env=os.environ.copy(),
-    )
-    print(result.stdout)
-    if result.returncode != 0:
+    pipeline_name = f"etl_pipeline → {stage}"
+
+    for attempt in range(1, MAX_RETRIES + 1):
+        start = time.time()
+        result = subprocess.run(
+            [sys.executable, script_path],
+            capture_output=True,
+            text=True,
+            env=os.environ.copy(),
+        )
+        print(result.stdout)
+        duration = time.time() - start
+
+        if result.returncode == 0:
+            # ✅ Success
+            notify_success(
+                pipeline_name=pipeline_name,
+                duration_sec=duration,
+            )
+            return
+
+        error = RuntimeError(
+            f"{script_name} failed (exit {result.returncode})\n{result.stderr}"
+        )
         print("STDERR:", result.stderr)
-        raise RuntimeError(f"{script_name} failed (exit {result.returncode})")
+
+        if attempt < MAX_RETRIES:
+    
+            notify_retry(
+                pipeline_name=pipeline_name,
+                attempt=attempt,
+                max_attempts=MAX_RETRIES,
+                error=error,
+            )
+            time.sleep(10 * attempt)   # backoff: 10s → 20s → 30s
+        else:
+            
+            notify_failure(
+                pipeline_name=pipeline_name,
+                error=error,
+                stage=stage,
+            )
+            raise error
 
 
 with DAG(
@@ -48,17 +91,17 @@ with DAG(
 
     bronze_task = PythonOperator(
         task_id="bronze_extract",
-        python_callable=lambda: run_script("bronze_extract.py"),
+        python_callable=lambda: run_script("bronze_extract.py", stage="Bronze"),
     )
 
     silver_task = PythonOperator(
         task_id="silver_transform",
-        python_callable=lambda: run_script("silver_transform.py"),
+        python_callable=lambda: run_script("silver_transform.py", stage="Silver"),
     )
 
     gold_task = PythonOperator(
         task_id="gold_aggregate",
-        python_callable=lambda: run_script("gold_aggregate.py"),
+        python_callable=lambda: run_script("gold_aggregate.py", stage="Gold"),
     )
 
     bronze_task >> silver_task >> gold_task

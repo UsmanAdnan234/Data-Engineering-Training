@@ -53,9 +53,6 @@ def _err(statusCode: int, code: str, message: str):
     )
 
 
-# =========================
-# CREATE CART
-# =========================
 @router.post("/carts", response_model=CreateCartResponse, status_code=201)
 def createCart(payload: CreateCartRequest, service: ICartService = Depends(getCartService)):
 
@@ -103,9 +100,6 @@ def createCart(payload: CreateCartRequest, service: ICartService = Depends(getCa
         _err(500, "INTERNAL_ERROR", "Unexpected error")
 
 
-# =========================
-# ADD ITEM
-# =========================
 @router.post("/carts/{cart_id}/items", response_model=AddCartItemResponse, status_code=201)
 def addItem(
     cart_id: Annotated[int, Path(gt=0, le=PG_INT_MAX)],
@@ -173,9 +167,7 @@ def addItem(
         _err(500, "INTERNAL_ERROR", "Unexpected error")
 
 
-# =========================
-# REMOVE ITEM
-# =========================
+
 @router.delete("/carts/{cart_id}/items/{item_id}", response_model=RemoveCartItemResponse, status_code=200)
 def removeItem(
     cart_id: Annotated[int, Path(gt=0, le=PG_INT_MAX)],
@@ -229,9 +221,6 @@ def removeItem(
         _err(500, "INTERNAL_ERROR", "Unexpected error")
 
 
-# =========================
-# DELETE CART
-# =========================
 @router.delete("/carts/{cart_id}", response_model=DeleteCartResponse, status_code=200)
 def deleteCart(
     cart_id: Annotated[int, Path(gt=0, le=PG_INT_MAX)],
@@ -266,9 +255,6 @@ def deleteCart(
         _err(500, "INTERNAL_ERROR", "Unexpected error")
 
 
-# =========================
-# CHECKOUT
-# =========================
 @router.post("/carts/{cart_id}/checkout", response_model=CheckoutResponse, status_code=200)
 def checkout(
     cart_id: Annotated[int, Path(gt=0, le=PG_INT_MAX)],
