@@ -22,6 +22,7 @@ x-airflow-common: &airflow-common
     - ./dags:/opt/airflow/dags
     - ./logs:/opt/airflow/logs
     - ./scripts:/opt/airflow/scripts
+    - ./notifications:/opt/airflow/notifications
   depends_on:
     postgres-airflow:
       condition: service_healthy
